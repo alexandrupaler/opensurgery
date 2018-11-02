@@ -1,0 +1,250 @@
+<head>
+    <title>Santa Barbara Surgery</title>
+    <style>
+        body {
+          margin: 0;
+      }
+  </style>
+
+    <!--
+  <script src="//unpkg.com/3d-force-graph"></script>
+   -->
+    <script src="./libs/3d-force-graph.min.js"></script>
+    <script src="http://unpkg.com/three"></script>
+    <script src="libs/MyBoxBufferGeometry.js"></script>
+
+    <script>
+
+        var zdistance = 200;
+
+        var active_link_colors = {};
+        var active_node_colors = {};
+
+
+        var loaded_json = null;
+
+        function filterEdgeOnColor(color) {
+            // make active or inactive
+            active_link_colors[color] = !active_link_colors[color];
+
+            // console.log("filter " + color + " " + active_link_colors[color]);
+            // for all colors generate an object 
+            // only with the ones which are active (True)
+
+            processed_json = {};
+
+            processed_json.nodes = loaded_json.nodes;
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                if (loaded_json.links[i].c == color || color == "all") {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            //reload JSON
+            Graph.graphData(processed_json);
+        }
+
+        function filterNodeOnColor(color) {
+            // make active or inactive
+            active_link_colors[color] = !active_link_colors[color];
+
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific color
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].c == color || color == "all") {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            //reload JSON
+            Graph.graphData(processed_json);
+        }
+
+        function filterNodeOnTime(time) {
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific time coordinate
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].fz <= time) {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            //reload JSON
+            Graph.graphData(processed_json);
+        }
+
+        function addControlColor(color, where_id) {
+            var btn = document.createElement("button");
+            var t = document.createTextNode(".....");
+            if (color == "all")
+                t.textContent = "All"
+            btn.appendChild(t);
+            if (color != "all")
+                btn.style["background-color"] = color;
+
+            if (where_id === "edge_buttons")
+                btn.onclick = function () { filterEdgeOnColor(color) };
+            else if (where_id === "node_buttons")
+                btn.onclick = function () { filterNodeOnColor(color) };
+
+            document.getElementById(where_id).appendChild(btn);
+        }
+
+        function counterOnChange() {
+            // reset active colors
+            active_link_colors = {};
+            active_node_colors = {};
+
+            var myNode = document.getElementById('edge_buttons');
+            while (myNode.firstChild) {
+                myNode.removeChild(myNode.firstChild);
+            }
+
+            var myNode = document.getElementById('node_buttons');
+            while (myNode.firstChild) {
+                myNode.removeChild(myNode.firstChild);
+            }
+
+            var filename = 'layout.json';
+
+            console.log("fetch " + filename);
+
+            fetch(filename)
+                .then(function (response) {
+                    return response.json();
+                },
+                    function (reason) {
+                        console.log(reason);
+                    })
+                .then(function (myJson) {
+
+                    //save to global var?
+                    loaded_json = myJson;
+
+                    Graph.graphData(loaded_json);
+
+                    //console.log("XXX" + myJson.links.length);
+
+                    for (var i = 0; i < myJson["links"].length; i++) {
+                        var curr_link = myJson.links[i];
+                        if (!(curr_link.c in active_link_colors)) {
+                            active_link_colors[curr_link.c] = true;
+                            addControlColor(curr_link.c, "edge_buttons");
+                        }
+                    }
+
+                    var min_time = 10000;
+                    var max_time = -1000;
+                    for (var i = 0; i < myJson["nodes"].length; i++) {
+                        var curr_node = myJson.nodes[i];
+                        if (!(curr_node.c in active_node_colors)) {
+                            active_node_colors[curr_node.c] = true;
+                            addControlColor(curr_node.c, "node_buttons");
+                        }
+
+                        if (min_time > curr_node.fz) {
+                            min_time = curr_node.fz;
+                        }
+                        if (max_time < curr_node.fz) {
+                            max_time = curr_node.fz;
+                        }
+                    }
+
+                    //add a button to view all again
+                    addControlColor("all", "edge_buttons");
+                    addControlColor("all", "node_buttons");
+
+                    document.getElementById("number_time").min = min_time;
+                    document.getElementById("number_time").max = max_time;
+                    document.getElementById("number_time").value = max_time;
+
+                    console.log("maxtime" + max_time);
+                });
+        }
+    </script>
+</head>
+
+<body>
+    <div id="graphcounter">
+        Graph number
+        <input type="number" min="0" max="1000" step="1" value="0" onchange="counterOnChange(this.value)">
+        Time Coordinate
+        <input type="number" id="number_time" min="0" max="1000" step="1" value="0" onchange="filterNodeOnTime(this.value)">
+    </div>
+    <div id="controlpanel">
+        View Edge <div id="edge_buttons"></div>
+        View Node <div id="node_buttons"></div>
+    </div>
+    <div id="3d-graph"></div>
+
+    <script>
+
+        var geometry = new MyBoxBufferGeometry( 0.5, 0.5, 0.5);
+        //var edges = new THREE.EdgesGeometry( geometry );
+
+        var edges_mat = new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } );
+        //var wire_edges = new THREE.LineSegments( edges, edges_mat );
+
+
+        var Graph = ForceGraph3D()
+            (document.getElementById('3d-graph'))
+            .nodeRelSize(0.1)
+            .nodeVal(d => { if (d.hasOwnProperty("s")){return d.s;} else {return 0.5}})
+            .linkWidth(0.1)
+            .linkOpacity(1)
+            .backgroundColor("#ffffff")
+            .nodeColor("c")
+            .linkColor("c")
+            .cameraPosition({ x: 0, y: 0, z: zdistance })
+            .height(window.innerHeight * 0.9)
+            .nodeLabel(d => `<span style="color: black">${d.op}</span>`)
+            .nodeThreeObject( ({ c }) =>
+                        {
+                            var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: c, opacity: 0.8, transparent: true, side:THREE.DoubleSide}));
+
+                            
+                            var edges = new THREE.EdgesGeometry( geometry );
+                            var wire_edges = new THREE.LineSegments( edges, edges_mat );
+                            mesh.add(wire_edges);
+                            
+
+                            return mesh;
+                        }
+            );
+
+        counterOnChange();
+    </script>
+</body>
