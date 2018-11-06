@@ -28,7 +28,8 @@ def main():
     commands = prep.replace_gates_with_multibody(gate_list)
 
     # tests begin
-    # commands = ["INIT 7", "MZZ 4 ANCILLA", "MXX ANCILLA 2"]
+    commands = ['INIT 8', 'H 2', 'ROTATE 2', 'H 4', 'ROTATE 4', 'S 7', 'NEED A', 'MZZ A 4', 'MX A', 'NEED A', 'MZZ A 3', 'MX A', 'H 2', 'ROTATE 2', 'S 5', 'ANCILLA 0', 'MXX 6 ANCILLA', 'MZZ 0 ANCILLA', 'MX ANCILLA', 'H 4', 'ROTATE 4', 'H 1', 'ROTATE 1']
+    # commands = ['INIT 8', 'MZZ 0 ANCILLA']
     # tests end
 
     print(commands)

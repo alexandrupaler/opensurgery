@@ -290,12 +290,25 @@ class CubeLayout:
             op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
             if self.operations_dictionary[op_id]["op_type"] == OperationTypes.NOOP:
                 # take the type from the layer_map
-                if self.layer_map.placement_map[qubit[0]][qubit[1]] == lll.MapCellType.ANCILLA:
-                    self.operations_dictionary[op_id]["op_type"] = OperationTypes.USE_ANCILLA
-                elif self.layer_map.placement_map[qubit[0]][qubit[1]] == lll.MapCellType.QUBIT:
-                    self.operations_dictionary[op_id]["op_type"] = OperationTypes.USE_QUBIT
-                elif self.layer_map.placement_map[qubit[0]][qubit[1]] == lll.MapCellType.DISTILLATION:
-                    self.operations_dictionary[op_id]["op_type"] = OperationTypes.USE_DISTILLATION
+                self.debug_cell(qubit[0], qubit[1], qubit[2])
+
+
+                # xxx = self.layer_map.placement_map[qubit[0]][qubit[1]]
+                # op_t = OperationTypes.NOOP
+                # if xxx == lll.MapCellType.ANCILLA:
+                #     op_t = OperationTypes.USE_ANCILLA
+                # elif xxx == lll.MapCellType.QUBIT:
+                #     op_t = OperationTypes.USE_QUBIT
+                # elif xxx == lll.MapCellType.DISTILLATION:
+                #     op_t = OperationTypes.USE_DISTILLATION
+                # self.operations_dictionary[op_id]["op_type"] = op_t
+
+        for qubit in touch_set_meas:
+            idx = self.get_cell_id(*qubit)
+            op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
+            if self.operations_dictionary[op_id]["op_type"] == OperationTypes.NOOP:
+                # take the type from the layer_map
+                self.debug_cell(qubit[0], qubit[1], qubit[2])
 
         # add a new operation
         new_op = {"op_type": op_type,

@@ -34,7 +34,7 @@ class VisualiseLayout:
                     cell_id = layout.get_cell_id(i, j, t)
                     color = self.get_color(op_type)
 
-                    filter
+                    # filter
                     if op_type == la.OperationTypes.NOOP and remove_noop:
                         continue
 
