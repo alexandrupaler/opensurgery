@@ -106,6 +106,35 @@
             Graph.graphData(processed_json);
         }
 
+        function filterNodeOnOp(op_number) {
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific time coordinate
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].op == op_number || op_number == "-1") {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            //reload JSON
+            Graph.graphData(processed_json);
+        }
+
         function addControlColor(color, where_id) {
             var btn = document.createElement("button");
             var t = document.createTextNode(".....");
@@ -166,9 +195,17 @@
                         }
                     }
 
+                    operation_ids = {}
+
                     var min_time = 10000;
                     var max_time = -1000;
                     for (var i = 0; i < myJson["nodes"].length; i++) {
+
+                        if (!(myJson.nodes[i].op in operation_ids))
+                        {
+                            operation_ids[myJson.nodes[i].op] = myJson.nodes[i].op;
+                        }
+
                         var curr_node = myJson.nodes[i];
                         if (!(curr_node.c in active_node_colors)) {
                             active_node_colors[curr_node.c] = true;
@@ -191,7 +228,19 @@
                     document.getElementById("number_time").max = max_time;
                     document.getElementById("number_time").value = max_time;
 
-                    console.log("maxtime" + max_time);
+                    var select_html = document.getElementById("operation_id")
+                    for (var key in operation_ids)
+                    {
+                        var opt = document.createElement("option");
+                        opt.value = key;
+
+                        var txt = document.createTextNode(key + "");
+                        opt.appendChild(txt);
+
+                        select_html.appendChild(opt);
+                    }
+
+                    // console.log("maxtime" + max_time);
                 });
         }
     </script>
@@ -203,6 +252,10 @@
         <input type="number" min="0" max="1000" step="1" value="0" onchange="counterOnChange(this.value)">
         Time Coordinate
         <input type="number" id="number_time" min="0" max="1000" step="1" value="0" onchange="filterNodeOnTime(this.value)">
+        Operation Id:
+        <select id="operation_id" onchange="filterNodeOnOp(this.value)">
+            <option value="-1">All</option>
+        </select> 
     </div>
     <div id="controlpanel">
         View Edge <div id="edge_buttons"></div>
@@ -212,18 +265,14 @@
 
     <script>
 
-        var geometry = new MyBoxBufferGeometry( 0.5, 0.5, 0.5);
-        //var edges = new THREE.EdgesGeometry( geometry );
-
+        var dim = 0.8
         var edges_mat = new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } );
-        //var wire_edges = new THREE.LineSegments( edges, edges_mat );
-
 
         var Graph = ForceGraph3D()
             (document.getElementById('3d-graph'))
             .nodeRelSize(0.1)
             .nodeVal(d => { if (d.hasOwnProperty("s")){return d.s;} else {return 0.5}})
-            .linkWidth(0.1)
+            .linkWidth(0.7)
             .linkOpacity(1)
             .backgroundColor("#ffffff")
             .nodeColor("c")
@@ -231,16 +280,30 @@
             .cameraPosition({ x: 0, y: 0, z: zdistance })
             .height(window.innerHeight * 0.9)
             .nodeLabel(d => `<span style="color: black">${d.op}</span>`)
-            .nodeThreeObject( ({ c }) =>
+            .nodeThreeObject( cube =>
                         {
-                            var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: c, opacity: 0.8, transparent: true, side:THREE.DoubleSide}));
+                            if(cube.c == "white")
+                            {
+                                return;
+                            }
 
-                            
+                            var sides = cube.s
+
+                            var geometry = new MyBoxBufferGeometry(sides, dim, dim, dim);
+                            var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: cube.c, opacity: 0.8, transparent: true, side:THREE.DoubleSide}));
+
+                            if(cube.sides != 63)
+                            {
+                                // add the black sides - X logical stabiliser indication for the cell
+                                var geometry2 = new MyBoxBufferGeometry(63 - sides, dim, dim, dim);
+                                var mesh2 = new THREE.Mesh( geometry2, new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 1, side:THREE.DoubleSide}));
+                                mesh.add(mesh2);
+                            }
+
                             var edges = new THREE.EdgesGeometry( geometry );
                             var wire_edges = new THREE.LineSegments( edges, edges_mat );
                             mesh.add(wire_edges);
                             
-
                             return mesh;
                         }
             );

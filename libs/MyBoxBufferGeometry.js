@@ -35,7 +35,7 @@ MyBoxGeometry.prototype.constructor = MyBoxGeometry;
 
 // BoxBufferGeometry
 
-function MyBoxBufferGeometry( width, height, depth, widthSegments, heightSegments, depthSegments ) {
+function MyBoxBufferGeometry( whichfaces, width, height, depth, widthSegments, heightSegments, depthSegments ) {
 
 	THREE.BufferGeometry.call( this );
 
@@ -74,14 +74,25 @@ function MyBoxBufferGeometry( width, height, depth, widthSegments, heightSegment
 	var numberOfVertices = 0;
 	var groupStart = 0;
 
-	// build each side of the box geometry
+	// build each side of the box geometry, if specified 
+	if (whichfaces == 0)
+	{
+		//do not allow for no face to be drawn
+		whichfaces = 63;
+	}
 
-	buildPlane( 'z', 'y', 'x', - 1, - 1, depth, height, width, depthSegments, heightSegments, 0 ); // px
-	buildPlane( 'z', 'y', 'x', 1, - 1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
-	//buildPlane( 'x', 'z', 'y', 1, 1, width, depth, height, widthSegments, depthSegments, 2 ); // py
-	buildPlane( 'x', 'z', 'y', 1, - 1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
-	//buildPlane( 'x', 'y', 'z', 1, - 1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
-	buildPlane( 'x', 'y', 'z', - 1, - 1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
+	if((whichfaces & 1) == 1)
+		buildPlane( 'z', 'y', 'x', - 1, - 1, depth, height, width, depthSegments, heightSegments, 0 ); // px
+	if((whichfaces & 2) == 2)	
+		buildPlane( 'z', 'y', 'x', 1, - 1, depth, height, - width, depthSegments, heightSegments, 1 ); // nx
+	if((whichfaces & 4) == 4)
+		buildPlane( 'x', 'z', 'y', 1, 1, width, depth, height, widthSegments, depthSegments, 2 ); // py
+	if((whichfaces & 8) == 8)
+		buildPlane( 'x', 'z', 'y', 1, - 1, width, depth, - height, widthSegments, depthSegments, 3 ); // ny
+	if((whichfaces & 16) == 16)
+		buildPlane( 'x', 'y', 'z', 1, - 1, width, height, depth, widthSegments, heightSegments, 4 ); // pz
+	if((whichfaces & 32) == 32)
+		buildPlane( 'x', 'y', 'z', - 1, - 1, width, height, - depth, widthSegments, heightSegments, 5 ); // nz
 
 	// build geometry
 
