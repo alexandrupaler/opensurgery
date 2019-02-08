@@ -1,2 +1,1 @@
-# sb35
-sb35
+# OpenSurgery - compiler for circuits to lattice surgery
