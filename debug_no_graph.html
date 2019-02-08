@@ -1,0 +1,580 @@
+<head>
+    <meta charset="utf-8"/>
+
+    <title>Santa Barbara Surgery</title>
+    <style>
+        body {
+          margin: 0;
+      }
+  </style>
+
+<!--
+    <script src="//unpkg.com/3d-force-graph"></script>
+    <script src="./libs/3d-force-graph.min.js"></script>
+-->
+    <script src="http://unpkg.com/three"></script>
+
+    <script src="libs/Detector.js"></script>
+    <script src="libs/PalerBoxBufferGeometry.js"></script>
+    <script src="libs/TrackballControls.js"></script>
+
+    <script src="libs/SurgeryWebGLVisualiser.js"></script>
+
+    <script>
+
+        const HADAMARD_DECORATOR = "H";
+
+        function boxes_collection_has_color(color)
+        {
+            var ret = (color in boxes_collection);
+            return ret;
+        }
+
+        function boxes_collection_add_color(color)
+        {
+            boxes_collection[color] = new THREE.PalerBoxBufferGeometry();
+        }
+
+        function boxes_collection_clean()
+        {
+            var keys = Object.keys(boxes_collection);
+            
+            for (key in keys)
+            {
+                delete boxes_collection[key];
+            }
+
+            boxes_collection = {};
+        }
+
+        function process_node_to_mesh(cube)
+        {
+            if(cube.c == "white")
+            {
+                return;
+            }
+
+            var sides = cube.s;
+            var color = cube.c;
+            var current_operation_color = cube.c;
+
+            var scale_factor = 0.25;//0.25;
+            var decorator_factor = 2;
+
+            var dim = 0.8;
+
+            if(["green", "magenta"].includes(current_operation_color))
+            {
+                scale_factor = 1.0;
+                dim = 1.0;
+                
+            }
+
+            if(scale_factor < 1)
+            {
+                //the full size, if spacing is introduced by scaling
+                dim = 1.0;
+            }
+
+            var dim1 = dim * scale_factor;
+            var dim2 = dim * scale_factor;
+            var dim3 = dim * scale_factor;
+            // var offset = [0, 0, 0];
+            var offset = [ cube.fx + dim1/2,
+                        cube.fy + dim2/2,
+                        cube.fz + dim3/2];
+
+            /*
+                These are flat Hadamards
+                move them to the end of the time of distance D
+            */
+            if (cube.d == HADAMARD_DECORATOR)
+            {
+                //flat operation
+                dim1 = dim1 * decorator_factor;
+                dim2 = dim2 * decorator_factor;
+                dim3 = 0.02;
+
+                // offset = [0, 0, dim/2];
+                offset[2] += dim*(1- scale_factor) + dim*scale_factor/2;
+            }
+
+            construct_cuboid(dim1, dim2, dim3, offset, sides, color);
+
+            /*
+                if scaling should be applied
+                this means that bars between the nodes are introduced into the visualisation
+            */
+            if((!["green", "magenta"].includes(current_operation_color)) && (cube.d != HADAMARD_DECORATOR) && (scale_factor != 1.0))
+            {
+                var coordinate_exists = false;
+                var has_valid_id = false;
+
+                var current_op = cube.op;
+
+                var allow_extension_hardware = !(["red"].includes(current_operation_color))
+                coordinate_exists = check_coordinate_exists(coordinates_matrix, cube.fx + 1, cube.fy, cube.fz);
+                if(coordinate_exists)
+                {
+                    has_valid_id = (coordinates_matrix[cube.fx + 1][cube.fy][cube.fz] != -1);
+
+                    /*
+                        Movements (orange) cannot connect on hardware plain to USE_QUBIT(red)
+                    */
+                    if(current_operation_color == "orange")
+                    {
+                        if (coordinates_matrix[cube.fx + 1][cube.fy][cube.fz].includes("OperationTypes.USE_QUBIT"))
+                        {
+                            allow_extension_hardware = false;
+                        }
+                    }
+                    if(current_operation_color == "yellow")
+                    {
+                        if (! coordinates_matrix[cube.fx + 1][cube.fy][cube.fz].includes("OperationTypes.USE_ANCILLA"))
+                        {
+                            allow_extension_hardware = false;
+                        }
+                    }
+                }
+                else
+                {
+                    has_valid_id = false;
+                }
+                if(coordinate_exists && has_valid_id && allow_extension_hardware)
+                {
+                    
+                    var n_offset = Array();
+                    n_offset = offset.slice();
+                    n_offset[0] += dim1/2 + dim*(1 - scale_factor)/2;
+
+                    construct_cuboid(dim*(1 - scale_factor), dim2, dim3, n_offset, sides, color);
+                }
+
+                allow_extension_hardware = !(["red"].includes(current_operation_color))
+                coordinate_exists = check_coordinate_exists(coordinates_matrix, cube.fx, cube.fy + 1, cube.fz);
+                if(coordinate_exists)
+                {
+                    has_valid_id = (coordinates_matrix[cube.fx][cube.fy + 1][cube.fz] != -1);
+                    /*
+                        Movements (orange) cannot connect on hardware plain to USE_QUBIT(red)
+                    */
+                    if(current_operation_color == "orange")
+                    {
+                        if (coordinates_matrix[cube.fx][cube.fy + 1][cube.fz].includes("OperationTypes.USE_QUBIT"))
+                        {
+                            allow_extension_hardware = false;
+                        }
+                    }
+                    if(current_operation_color == "yellow")
+                    {
+                        if (! coordinates_matrix[cube.fx][cube.fy + 1][cube.fz].includes("OperationTypes.USE_ANCILLA"))
+                        {
+                            allow_extension_hardware = false;
+                        }
+                    }
+                }
+                else
+                {
+                    has_valid_id = false;
+                }
+                if(coordinate_exists && has_valid_id && allow_extension_hardware)
+                {
+                    var n_offset = Array();
+                    n_offset = offset.slice();
+                    n_offset[1] += dim2/2 + dim*(1 - scale_factor)/2;
+                    
+                    construct_cuboid(dim1, dim*(1 - scale_factor), dim3, n_offset, sides, color);
+                }
+
+
+                var allow_extension_time = !(["yellow", "orange"].includes(current_operation_color))
+                coordinate_exists = check_coordinate_exists(coordinates_matrix, cube.fx, cube.fy, cube.fz + 1);
+                if(coordinate_exists)
+                {
+                    has_valid_id = (coordinates_matrix[cube.fx][cube.fy][cube.fz + 1] != -1);
+                    if(current_operation_color == "orange")
+                    {
+                        if (coordinates_matrix[cube.fx][cube.fy][cube.fz + 1].includes("OperationTypes.USE_QUBIT"))
+                        {
+                            allow_extension_time = true;
+                        }
+                    }
+                }
+                else
+                {
+                    has_valid_id = false;
+                }
+                if(coordinate_exists && has_valid_id && allow_extension_time)
+                {
+                    var n_offset = Array();
+                    n_offset = offset.slice();
+                    n_offset[2] += dim3/2 + dim*(1 - scale_factor)/2;
+                    construct_cuboid(dim1, dim2, dim*(1 - scale_factor), n_offset, sides, color);
+                }
+            }
+        }
+
+        function process_link_to_mesh(link)
+        {
+            if(!boxes_collection_has_color("links"))
+                boxes_collection_add_color("links")
+
+            boxes_collection["links"].addBox(63, offset /*position*/, [dim1, dim2, dim3] /*dimensions*/);
+        }
+
+        function reload_visualisation(processed_json)
+        {
+            // reload JSON
+            // Graph.graphData(processed_json);
+            // surgery_visualiser.start_surgery_view(boxes_collection, boxes_collection.keys());
+
+            // clean the collection of geometries
+            boxes_collection_clean();
+
+            /*
+                Collect the 3D objects from the JSON
+            */
+            for (var i = 0; i < processed_json["nodes"].length; i++)    
+            {
+                process_node_to_mesh(processed_json["nodes"][i]);
+            }
+
+            // /*
+            //     Construct the links where merges and splits are made
+            // */
+            // for(var i = 0; i < processed_json["links"].length; i++)
+            // {
+            //     process_link_to_mesh(processed_json["links"][i])
+            // }
+            
+            surgery_visualiser.start_surgery_view(boxes_collection, Object.keys(boxes_collection));
+        }
+
+        function filterEdgeOnColor(color) {
+            // make active or inactive
+            active_link_colors[color] = !active_link_colors[color];
+
+            // console.log("filter " + color + " " + active_link_colors[color]);
+            // for all colors generate an object 
+            // only with the ones which are active (True)
+
+            processed_json = {};
+
+            processed_json.nodes = loaded_json.nodes;
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                if (loaded_json.links[i].c == color || color == "all") {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            reload_visualisation(processed_json);
+        }
+
+        function filterNodeOnColor(color) {
+            // make active or inactive
+            active_link_colors[color] = !active_link_colors[color];
+
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific color
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].c == color || color == "all") {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            reload_visualisation(processed_json);
+        }
+
+        function filterNodeOnTime(time) {
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific time coordinate
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].fz <= time) {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            reload_visualisation(processed_json);
+        }
+
+        function filterNodeOnOp(op_number) {
+            processed_json = {};
+
+            //an empty set of nodes
+            //add only nodes of specific time coordinate
+            active_nodes = {};
+            processed_json.nodes = [];
+            for (var i = 0; i < loaded_json["nodes"].length; i++) {
+                if (loaded_json.nodes[i].op == op_number || op_number == "-1") {
+                    processed_json.nodes.push(loaded_json.nodes[i]);
+                    active_nodes[loaded_json.nodes[i].id] = true;
+                }
+            }
+
+            // add links only between nodes which exist in the collection
+            processed_json.links = [];
+            for (var i = 0; i < loaded_json["links"].length; i++) {
+                var key_is_in = loaded_json.links[i].source.id in active_nodes;
+                key_is_in = key_is_in && loaded_json.links[i].target.id in active_nodes;
+
+                if (key_is_in) {
+                    processed_json.links.push(loaded_json.links[i]);
+                }
+            }
+
+            reload_visualisation(processed_json);
+        }
+
+        function addControlColor(color, where_id) {
+            var btn = document.createElement("button");
+            var t = document.createTextNode(".....");
+            if (color == "all")
+                t.textContent = "All"
+            btn.appendChild(t);
+            if (color != "all")
+                btn.style["background-color"] = color;
+
+            if (where_id === "edge_buttons")
+                btn.onclick = function () { filterEdgeOnColor(color) };
+            else if (where_id === "node_buttons")
+                btn.onclick = function () { filterNodeOnColor(color) };
+
+            document.getElementById(where_id).appendChild(btn);
+        }
+
+        function check_coordinate_exists(collection, c1, c2, c3)
+        {
+            if (! (c1 in collection))
+                return false;
+            
+            if(! (c2 in collection[c1]) )
+                return false;
+
+            if(! (c3 in collection[c1][c2]))
+                return false;
+
+            return true;
+        }
+
+        function add_coordinates_as_keys(collection, fx, fy, fz)
+        {
+            if(! (fx in collection))
+            {
+                collection[fx] = {}
+            }
+
+            if(! (fy in collection[fx]))
+            {
+                collection[fx][fy] = {}
+            }
+
+            if(! (fz in collection[fx][fy]))
+            {
+                collection[fx][fy][fz] = -1;
+            }
+        }
+
+        function counterOnChange() {
+            // reset active colors
+            active_link_colors = {};
+            active_node_colors = {};
+
+            var myNode = document.getElementById('edge_buttons');
+            while (myNode.firstChild) {
+                myNode.removeChild(myNode.firstChild);
+            }
+
+            var myNode = document.getElementById('node_buttons');
+            while (myNode.firstChild) {
+                myNode.removeChild(myNode.firstChild);
+            }
+
+            var filename = 'layout.json';
+
+            console.log("fetch " + filename);
+
+            fetch(filename)
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (myJson) {
+
+                    //save to global var?
+                    loaded_json = myJson;
+
+                    for (var i = 0; i < myJson["nodes"].length; i++)
+                    {
+                        var node = myJson["nodes"][i];
+                        add_coordinates_as_keys(coordinates_matrix, node.fx, node.fy, node.fz);
+                        coordinates_matrix[node.fx][node.fy][node.fz] = node.op;
+                    }
+
+                    // reload_visualisation(loaded_json);
+
+                    for (var i = 0; i < myJson["links"].length; i++) {
+                        var curr_link = myJson.links[i];
+                        if (!(curr_link.c in active_link_colors)) {
+                            active_link_colors[curr_link.c] = true;
+                            addControlColor(curr_link.c, "edge_buttons");
+                        }
+                    }
+
+                    operation_ids = {}
+
+                    var min_time = 10000;
+                    var max_time = -1000;
+                    for (var i = 0; i < myJson["nodes"].length; i++) {
+
+                        //collect operation ids
+                        if (!(myJson.nodes[i].op in operation_ids))
+                        {
+                            operation_ids[myJson.nodes[i].op] = myJson.nodes[i].op;
+                        }
+
+                        var curr_node = myJson.nodes[i];
+                        if (!(curr_node.c in active_node_colors)) {
+                            active_node_colors[curr_node.c] = true;
+                            addControlColor(curr_node.c, "node_buttons");
+                        }
+
+                        if (min_time > curr_node.fz) {
+                            min_time = curr_node.fz;
+                        }
+                        if (max_time < curr_node.fz) {
+                            max_time = curr_node.fz;
+                        }
+                    }
+
+                    /*merge geometries for cubes with the same operation ID*/
+                    
+                    //add a button to view all again
+                    addControlColor("all", "edge_buttons");
+                    addControlColor("all", "node_buttons");
+
+                    document.getElementById("number_time").min = min_time;
+                    document.getElementById("number_time").max = max_time;
+                    document.getElementById("number_time").value = max_time;
+
+                    var select_html = document.getElementById("operation_id")
+                    for (var key in operation_ids)
+                    {
+                        var opt = document.createElement("option");
+                        opt.value = key;
+
+                        var txt = document.createTextNode(key + "");
+                        opt.appendChild(txt);
+
+                        select_html.appendChild(opt);
+                    }
+
+                    reload_visualisation(loaded_json);
+                });
+        }
+
+        function is_zero_vector(vector)
+        {
+            var ret = true;
+            for(var i=0; i<vector.length; i++)
+            {
+                ret = ret && (vector[i] == 0);
+            }
+
+            return ret;
+        }
+
+        function construct_cuboid(dim1, dim2, dim3, offset, sides, color)
+        {
+            // console.log("construct")
+
+            if(!boxes_collection_has_color(color))
+                boxes_collection_add_color(color)
+
+            if(!boxes_collection_has_color("black"))
+                boxes_collection_add_color("black")
+
+            if(!boxes_collection_has_color("wireframe"))
+                boxes_collection_add_color("wireframe")
+
+
+            boxes_collection[color].addBox(sides, offset /*position*/, [dim1, dim2, dim3] /*dimensions*/);
+            boxes_collection["wireframe"].addBox(63, offset /*position*/, [dim1, dim2, dim3] /*dimensions*/);
+            boxes_collection["black"].addBox(63 - sides, offset /*position*/, [dim1, dim2, dim3] /*dimensions*/);
+        }
+    </script>
+</head>
+
+<body>
+    <div id="graphcounter">
+        Graph number
+        <input type="number" min="0" max="1000" step="1" value="0" onchange="counterOnChange(this.value)">
+        Time Coordinate
+        <input type="number" id="number_time" min="0" max="1000" step="1" value="0" onchange="filterNodeOnTime(this.value)">
+        Operation Id:
+        <select id="operation_id" onchange="filterNodeOnOp(this.value)">
+            <option value="-1">All</option>
+        </select> 
+    </div>
+    <div id="controlpanel">
+        View Edge <div id="edge_buttons"></div>
+        View Node <div id="node_buttons"></div>
+    </div>
+    <div id="3d-surgery"></div>
+
+    <script>
+        var active_link_colors = {};
+        var active_node_colors = {};
+
+        /*
+            A global variable to hold the loaded JSON
+        */
+        var loaded_json = null;
+
+        /*
+            The JSON is processed into an array of cells
+            -> I am reconstructing the data structure used in the Python code
+        */
+        var coordinates_matrix = {};
+
+        /*
+        */
+        var boxes_collection = {};
+
+        var surgery_visualiser = new SurgeryWebGLVisualiser();
+        surgery_visualiser.setup_visualisation('3d-surgery');
+
+        counterOnChange();
+    </script>
+</body>
