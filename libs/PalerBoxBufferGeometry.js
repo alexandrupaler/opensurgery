@@ -12,7 +12,8 @@ THREE.PalerBoxBufferGeometry = function () {
 	/*
 		A maximum limit of the total number of vertices which the geometry can hold
 	*/
-	var vertexCount = 50000000;
+	// removed two zeros
+	var vertexCount = 500000;
 
 	// buffers
 	this.vertices = new Float32Array(vertexCount * 3);
