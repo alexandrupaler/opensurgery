@@ -508,11 +508,11 @@ SurgeryWebGLVisualiser.prototype.setup_visualisation = function (containername) 
     var HEIGHT = y;
 
     var oldstyle = this.container.getAttribute("style");
-    oldstyle += "display:block; width:" + WIDTH + "px; height:" + (HEIGHT - 20) + "px;";
+    oldstyle += "display:block; width:" + (WIDTH  - 100) + "px; height:" + (HEIGHT - 100) + "px;";
     this.container.setAttribute("style", oldstyle);
 
-    this.container.style.width = WIDTH + 'px';
-    this.container.style.height = (HEIGHT - 20) + 'px';
+    this.container.style.width = (WIDTH - 100)+ 'px';
+    this.container.style.height = (HEIGHT - 100) + 'px';
 
     // Models
     this.spheregeometry = new THREE.SphereGeometry(.5, 3, 3)
