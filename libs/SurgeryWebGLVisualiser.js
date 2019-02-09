@@ -508,11 +508,11 @@ SurgeryWebGLVisualiser.prototype.setup_visualisation = function (containername) 
     var HEIGHT = y;
 
     var oldstyle = this.container.getAttribute("style");
-    oldstyle += "display:block; width:" + (WIDTH  - 100) + "px; height:" + (HEIGHT - 100) + "px;";
+    oldstyle += "display:block; width:" + (WIDTH  - 100) + "px; height:" + (HEIGHT - 200) + "px;";
     this.container.setAttribute("style", oldstyle);
 
-    this.container.style.width = (WIDTH - 100)+ 'px';
-    this.container.style.height = (HEIGHT - 100) + 'px';
+    this.container.style.width = (WIDTH - 100) + 'px';
+    this.container.style.height = (HEIGHT - 200) + 'px';
 
     // Models
     this.spheregeometry = new THREE.SphereGeometry(.5, 3, 3)
@@ -540,7 +540,7 @@ SurgeryWebGLVisualiser.prototype.setup_visualisation = function (containername) 
     // Renderer
     this.renderer = Detector.webgl ? new THREE.WebGLRenderer({ preserveDrawingBuffer: true }) : new THREE.CanvasRenderer();
     //renderer = new THREE.WebGLRenderer( { antialias: true });
-    this.renderer.setSize(WIDTH, HEIGHT - 20);
+    this.renderer.setSize(WIDTH - 100, HEIGHT - 200);
     this.renderer.setClearColor(0xffffff, 1);
 
     //the statistics widget
