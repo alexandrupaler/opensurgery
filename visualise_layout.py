@@ -16,6 +16,12 @@ class VisualiseLayout:
             return "red"
         elif op_type == la.OperationTypes.USE_ANCILLA:
             return "yellow"
+        elif op_type == la.OperationTypes.USE_S_GATE:
+            return "green"
+        elif op_type == la.OperationTypes.MOVE_PATCH:
+            return "orange"
+        elif op_type == la.OperationTypes.HADAMARD_QUBIT:
+            return "cyan"
 
     def visualise_cube(self, layout, remove_noop):
         json2 = {"nodes": [], "links": []}
@@ -28,30 +34,48 @@ class VisualiseLayout:
         for i in range(layout.get_isize()):
             for j in range(layout.get_jsize()):
                 for t in range(layout.get_tsize()):
-                    op_id = layout.coordinates[i][j][t]
 
-                    op_type = layout.operations_dictionary[op_id]["op_type"]
-                    cell_id = layout.get_cell_id(i, j, t)
-                    color = self.get_color(op_type)
+                    ops_collection = layout.coordinates[i][j][t]
 
-                    # filter
-                    if op_type == la.OperationTypes.NOOP and remove_noop:
-                        continue
+                    # take each operation from the collection and make a cube out of it
 
-                    sides = 60
-                    # when default this means that the volume is not used
-                    # ancillas do not rotate their X or Z
-                    if op_type in [la.OperationTypes.NOOP, la.OperationTypes.USE_ANCILLA]:
-                        sides = 63
+                    for op_id in ops_collection.operations:
+                        op_type = layout.operations_dictionary[op_id].op_type
 
-                    node_value = {"id": cell_id, "fy": i, "fx": j, "fz": t, "c": color, "op": op_id, "s": sides}
-                    json2["nodes"].append(node_value)
+                        cell_id = layout.get_cell_id(i, j, t)
+                        color = self.get_color(op_type)
 
+                        decorator = "."
+                        if ops_collection.get_zero_length_ops(layout.operations_dictionary) == la.OperationTypes.HADAMARD_QUBIT:
+                            decorator = "H"
+
+                        # filter
+                        if ops_collection.has_single_noop(layout.operations_dictionary) and remove_noop:
+                            continue
+
+                        sides = ops_collection.sides_integer_value
+
+                        # sides = 60
+                        # # when default this means that the volume is not used
+                        # # ancillas do not rotate their X or Z?
+                        # if op_type in [la.OperationTypes.NOOP, la.OperationTypes.USE_ANCILLA]:
+                        #     sides = 63
+
+                        node_value = {"id": cell_id,
+                                      "fy": i, "fx": j, "fz": t,
+                                      "c": color,
+                                      "op": str(op_type) + "_" + str(op_id),
+                                      "s": sides,
+                                      "d": decorator}
+                        json2["nodes"].append(node_value)
+
+        # for each operation in the collection of 3D cells
+        # determine which operations touch which
         for op_id in layout.operations_dictionary:
             operation = layout.operations_dictionary[op_id]
-            for touch_id in operation["touches"]:
-
-                touch_link = {"source": touch_id, "target": operation["touches"][touch_id], "c": "blue"}
+            # for touch_id in operation["touches"]:
+            for touch_id in operation.touches:
+                touch_link = {"source": touch_id, "target": operation.touches[touch_id], "c": "blue"}
                 json2["links"].append(touch_link)
 
         return json2

@@ -1,10 +1,11 @@
 <head>
     <meta charset="utf-8"/>
 
-    <title>Open Surgery - v. Santa Barbara</title>
+    <title>Open Surgery (Santa Barbara)</title>
     <style>
         body {
           margin: 0;
+          background-color:peachpuff;
       }
   </style>
 
@@ -19,9 +20,13 @@
     <script src="libs/TrackballControls.js"></script>
     <script src="libs/SurgeryWebGLVisualiser.js"></script>
 
+    <script src="libs/surgery_vis_utils.js"></script>
+
     <script>
 
         const HADAMARD_DECORATOR = "H";
+
+        const HADAMARD_COLOR = "";
 
         function boxes_collection_has_color(color)
         {
@@ -374,38 +379,6 @@
             document.getElementById(where_id).appendChild(btn);
         }
 
-        function check_coordinate_exists(collection, c1, c2, c3)
-        {
-            if (! (c1 in collection))
-                return false;
-            
-            if(! (c2 in collection[c1]) )
-                return false;
-
-            if(! (c3 in collection[c1][c2]))
-                return false;
-
-            return true;
-        }
-
-        function add_coordinates_as_keys(collection, fx, fy, fz)
-        {
-            if(! (fx in collection))
-            {
-                collection[fx] = {}
-            }
-
-            if(! (fy in collection[fx]))
-            {
-                collection[fx][fy] = {}
-            }
-
-            if(! (fz in collection[fx][fy]))
-            {
-                collection[fx][fy][fz] = -1;
-            }
-        }
-
         function counterOnChange() {
             // reset active colors
             active_link_colors = {};
@@ -503,17 +476,6 @@
                 });
         }
 
-        function is_zero_vector(vector)
-        {
-            var ret = true;
-            for(var i=0; i<vector.length; i++)
-            {
-                ret = ret && (vector[i] == 0);
-            }
-
-            return ret;
-        }
-
         function construct_cuboid(dim1, dim2, dim3, offset, sides, color)
         {
             // console.log("construct")
@@ -535,7 +497,7 @@
     </script>
 </head>
 
-<body style="background-color:grey">
+<body>
     <div id="graphcounter">
         Graph number
         <input type="number" min="0" max="1000" step="1" value="0" onchange="counterOnChange(this.value)">
@@ -550,7 +512,7 @@
         View Edge <div id="edge_buttons"></div>
         View Node <div id="node_buttons"></div>
     </div>
-    <div id="3d-surgery"></div>
+    <div id="3d-surgery" style="border-style: solid; border-width:3px;"></div>
 
     <script>
         var active_link_colors = {};

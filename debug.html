@@ -20,8 +20,16 @@
         var active_link_colors = {};
         var active_node_colors = {};
 
-
+        /*
+            A global variable to hold the loaded JSON
+        */
         var loaded_json = null;
+
+        /*
+            The JSON is processed into an array of cells
+            -> I am reconstructing the data structure used in the Python code
+        */
+        var coordinates_matrix = {};
 
         function filterEdgeOnColor(color) {
             // make active or inactive
@@ -152,6 +160,38 @@
             document.getElementById(where_id).appendChild(btn);
         }
 
+        function check_coordinate_exists(collection, c1, c2, c3)
+        {
+            if (! (c1 in collection))
+                return false;
+            
+            if(! (c2 in collection[c1]) )
+                return false;
+
+            if(! (c3 in collection[c1][c2]))
+                return false;
+
+            return true;
+        }
+
+        function add_coordinates_as_keys(collection, fx, fy, fz)
+        {
+            if(! (fx in collection))
+            {
+                collection[fx] = {}
+            }
+
+            if(! (fy in collection[fx]))
+            {
+                collection[fx][fy] = {}
+            }
+
+            if(! (fz in collection[fx][fy]))
+            {
+                collection[fx][fy][fz] = -1;
+            }
+        }
+
         function counterOnChange() {
             // reset active colors
             active_link_colors = {};
@@ -183,6 +223,13 @@
                     //save to global var?
                     loaded_json = myJson;
 
+                    for (var i = 0; i < myJson["nodes"].length; i++)
+                    {
+                        var node = myJson["nodes"][i];
+                        add_coordinates_as_keys(coordinates_matrix, node.fx, node.fy, node.fz);
+                        coordinates_matrix[node.fx][node.fy][node.fz] = node.op;
+                    }
+
                     Graph.graphData(loaded_json);
 
                     //console.log("XXX" + myJson.links.length);
@@ -201,6 +248,7 @@
                     var max_time = -1000;
                     for (var i = 0; i < myJson["nodes"].length; i++) {
 
+                        //collect operation ids
                         if (!(myJson.nodes[i].op in operation_ids))
                         {
                             operation_ids[myJson.nodes[i].op] = myJson.nodes[i].op;
@@ -220,6 +268,8 @@
                         }
                     }
 
+                    /*merge geometries for cubes with the same operation ID*/
+                    
                     //add a button to view all again
                     addControlColor("all", "edge_buttons");
                     addControlColor("all", "node_buttons");
@@ -264,8 +314,68 @@
     <div id="3d-graph"></div>
 
     <script>
+        function is_zero_vector(vector)
+        {
+            var ret = true;
+            for(var i=0; i<vector.length; i++)
+            {
+                ret = ret && (vector[i] == 0);
+            }
 
-        var dim = 0.8
+            return ret;
+        }
+
+        function generate_geometry(mesh, dim1, dim2, dim3, offset, sides, color)
+        {
+            
+            var material_cube = new THREE.MeshBasicMaterial( { color: color, opacity: 0.8, transparent: true, side:THREE.DoubleSide});
+            var material_sides = new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 1, transparent: false, side:THREE.DoubleSide});
+
+            //the geometry element
+            var geometry = new MyBoxBufferGeometry(sides, dim1, dim2, dim3); 
+
+            //will be offset by the vector specified in the parameters
+            //make it a vector
+            if(!is_zero_vector(offset))
+            {
+                geometry.applyMatrix( new THREE.Matrix4().makeTranslation(offset[0], offset[1], offset[2]) );
+            } 
+
+            //the mesh is added to the mesh received as parameter
+            var geom_mesh = new THREE.Mesh( geometry, material_cube);
+            mesh.add(geom_mesh);
+
+            // the X operator is specified by the sides argument
+            // if it is different from 63, then add the operator
+            // same procedure as before: geometry + mesh
+            if(sides != 63)
+            {
+                // add the black sides - X logical stabiliser indication for the cell
+                var geometry2 = new MyBoxBufferGeometry(63 - sides, dim1, dim2, dim3);
+                if (!is_zero_vector(offset))
+                {
+                    geometry2.applyMatrix( new THREE.Matrix4().makeTranslation(offset[0], offset[1], offset[2]) );
+                }
+                var mesh2 = new THREE.Mesh( geometry2, material_sides);
+                mesh.add(mesh2);
+            }
+
+            // the edges of the drawn cubes are added
+            // this is increasing the complexity of the visualisation just for eye candy
+            // add wires for nicer visualisation
+            var edges = new THREE.EdgesGeometry( geometry );
+            var wire_edges = new THREE.LineSegments( edges, edges_mat );
+            mesh.add(wire_edges);
+        }
+    </script>
+
+    <script>
+
+        var scale_factor = 0.5;//0.25;
+        var dim = 0.8;
+        dim = dim * scale_factor;
+
+        var decorator_factor = 1.2;
         var edges_mat = new THREE.LineBasicMaterial( { color: 0x000000, linewidth: 2 } );
 
         var Graph = ForceGraph3D()
@@ -287,22 +397,54 @@
                                 return;
                             }
 
-                            var sides = cube.s
+                            // this is the mesh where objects will be stored
+                            var mesh = new THREE.Mesh();
 
-                            var geometry = new MyBoxBufferGeometry(sides, dim, dim, dim);
-                            var mesh = new THREE.Mesh( geometry, new THREE.MeshBasicMaterial( { color: cube.c, opacity: 0.8, transparent: true, side:THREE.DoubleSide}));
-
-                            if(cube.sides != 63)
+                            var sides = cube.s;
+                            var color = cube.c;
+                            
+                            var dim1 = dim;
+                            var dim2 = dim;
+                            var dim3 = dim;
+                            var offset = [0, 0, 0];
+                            
+                            if (cube.d == 'orange')
                             {
-                                // add the black sides - X logical stabiliser indication for the cell
-                                var geometry2 = new MyBoxBufferGeometry(63 - sides, dim, dim, dim);
-                                var mesh2 = new THREE.Mesh( geometry2, new THREE.MeshBasicMaterial( { color: 0x000000, opacity: 1, side:THREE.DoubleSide}));
-                                mesh.add(mesh2);
+                                //flat operation
+                                dim1 = dim * decorator_factor;
+                                dim2 = dim * decorator_factor;
+                                dim3 = 0.02;
+
+                                offset = [0, 0, dim/2];
                             }
 
-                            var edges = new THREE.EdgesGeometry( geometry );
-                            var wire_edges = new THREE.LineSegments( edges, edges_mat );
-                            mesh.add(wire_edges);
+                            generate_geometry(mesh, dim1, dim2, dim3, offset, sides, color);
+
+                            /*
+                                if scaling should be applied
+                                this means that bars between the nodes are introduced into the visualisation
+                            */
+                            if(cube.d != "orange" && scale_factor != 1.0)
+                            {
+                                
+                                if(check_coordinate_exists(coordinates_matrix, cube.fx + 1, cube.fy, cube.fz) && coordinates_matrix[cube.fx + 1][cube.fy][cube.fz] != -1)
+                                {
+                                    offset = [(dim + dim1*(1/scale_factor))/2, 0, 0];
+                                    generate_geometry(mesh, dim1*(1/scale_factor), dim2, dim3, offset, sides, color);
+                                }
+
+                                if(check_coordinate_exists(coordinates_matrix, cube.fx, cube.fy + 1, cube.fz) && coordinates_matrix[cube.fx][cube.fy + 1][cube.fz] != -1)
+                                {
+                                    offset = [0, (dim + dim2*(1/scale_factor))/2, 0];
+                                    generate_geometry(mesh, dim1, dim2*(1/scale_factor), dim3, offset, sides, color);
+                                }
+
+                                if(check_coordinate_exists(coordinates_matrix, cube.fx, cube.fy, cube.fz + 1) && coordinates_matrix[cube.fx][cube.fy][cube.fz + 1] != -1)
+                                {
+                                    offset = [0, 0, (dim + dim3*(1/scale_factor))/2];
+                                    generate_geometry(mesh, dim1, dim2, dim3*(1/scale_factor), offset, sides, color);
+                                }
+                            }
                             
                             return mesh;
                         }

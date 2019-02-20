@@ -1,5 +1,5 @@
 '''
-works only with latest github versions of openfermion, cirq and openfermioncirq
+    Works only with latest github versions of openfermion, cirq and openfermioncirq
 '''
 
 import time
@@ -7,25 +7,21 @@ import cirq
 import openfermion as of
 import openfermioncirq as ofc
 
-from skc.operator import *
-from skc.dawson.factor import *
-from skc.dawson import *
-from skc.compose import *
-from skc.basis import *
-
-import math
-
 import random
 
-
 class CirqInterface:
-    def __init__(self):
-        # circuits_1 = self.kevin_hubbard_cirq()
-        # circuits_2 = self.kevin_lih_cirq()
-        # print(circuits_1[0].to_qasm())
 
-        # self.run_SK_on_gate()
+    def __init__(self):
         return
+
+    def openfermion_circuit(self):
+        """
+        OpenFermion test circuit
+        :return: A single string for the QASM circuit
+        """
+        circuits_1 = self.kevin_hubbard_cirq()
+        # circuits_2 = self.kevin_lih_cirq()
+        return circuits_1[0].to_qasm()
 
     def random_circuit(self, nr_qubits, nr_gates):
         c = cirq.Circuit()
@@ -54,33 +50,6 @@ class CirqInterface:
         # print(c.to_qasm())
 
         return c
-
-    def run_SK_on_gate(self):
-        H2 = get_hermitian_basis(d=2)
-        axis = cart3d_to_h2(x=0, y=0, z=1)
-        theta = math.pi / 16  # 45 degrees
-
-        # Compose a unitary to compile
-        matrix_U = axis_to_unitary(axis, theta, H2)
-        op_U = Operator(name="U", matrix=matrix_U)
-
-        n = 4
-        print("U= " + str(matrix_U))
-        print("n= " + str(n))
-
-        # Prepare the compiler
-        sk_set_factor_method(dawson_group_factor)
-        sk_set_basis(H2)
-        sk_set_axis(X_AXIS)
-        sk_build_tree("su2", 15)
-
-        Un = solovay_kitaev(op_U, n)
-        print("Approximated U: " + str(Un))
-
-        print("Un= " + str(Un.matrix))
-
-        # print("trace_dist(U,Un)= " + str(trace_distance(Un.matrix, op_U.matrix)))
-        # print("fowler_dist(U,Un)= " + str(fowler_distance(Un.matrix, op_U.matrix)))
 
     # Convert circuits to CZ and single-qubit gates
     # ---------------------------------------------
@@ -148,7 +117,7 @@ class CirqInterface:
         self.kevin_optimize_circuit(hubbard_simulation_circuit)
         t1 = time.time()
 
-        print('Optimizing circuits took {} seconds'.format(t1 - t0))
+        # print('Optimizing circuits took {} seconds'.format(t1 - t0))
         # print(hubbard_state_preparation_circuit.to_text_diagram(transpose=True))
 
         return hubbard_state_preparation_circuit, hubbard_simulation_circuit
@@ -215,7 +184,7 @@ class CirqInterface:
         self.kevin_optimize_circuit(lih_simulation_circuit)
         t1 = time.time()
 
-        print('Optimizing circuits took {} seconds'.format(t1 - t0))
+        # print('Optimizing circuits took {} seconds'.format(t1 - t0))
         # print(lih_state_preparation_circuit.to_text_diagram(transpose=True))
 
         return lih_state_preparation_circuit, lih_simulation_circuit

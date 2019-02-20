@@ -42,7 +42,7 @@ def compute_physical_resources(t_count, max_logical_qubits):
     # 1000 times the distance d2 logical error rate approximates the L2 Clifford preparation error.
     l2_Clifford_prep_error = 1000*p_logical(characteristic_gate_error_rate, l2_distillation_code_distance_d2)
     # The distilled L2 T gate error plus the L2 Clifford preparation error rate.
-    l2_output_error = l2_Clifford_prep_error + distillation_p_out(l2_T_gate_error,1)
+    l2_output_error = l2_Clifford_prep_error + distillation_p_out(l2_T_gate_error, 1)
     # Safe target error per T gate.
     target_error_per_T_gate = 1/(safety_factor * t_count)
     #
@@ -56,9 +56,9 @@ def compute_physical_resources(t_count, max_logical_qubits):
         number_of_distillation_levels = "3+, fail"
     #
     # Number of qubits associated with a single L1 distillation.
-    l1_distillation_qubits = 32*2*(l1_distillation_code_distance_d1 ** 2)
+    l1_distillation_qubits = 32 * 2 * (l1_distillation_code_distance_d1 ** 2)
     # Number of qubits associated with a single L2 distillation.
-    l2_distillation_qubits = 32*2*(l2_distillation_code_distance_d2 ** 2)
+    l2_distillation_qubits = 32 * 2 * (l2_distillation_code_distance_d2 ** 2)
     #
     # Note that if 2 levels of distillation are required, that will be a single L2 +8 L1 footprints.
     total_distillation_qubits = "fail"
@@ -114,7 +114,6 @@ def compute_physical_resources(t_count, max_logical_qubits):
     # Total number of data qubits, including communication channels.
     num_data_qubits = "fail"
     if number_of_distillation_levels == 1 or number_of_distillation_levels == 2:
-        # TODO: Update with correct number of patches
         # TODO: And correct height of the entire schedule
         num_data_qubits = 1.5 * max_logical_qubits * 2 * (data_code_distance ** 2)
     else:
