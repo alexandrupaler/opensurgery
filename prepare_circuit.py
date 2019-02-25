@@ -126,12 +126,12 @@ class PrepareCircuit:
         str_s = [s.replace("rz(pi*-1.5)", "T") for s in str_s]
 
         # pi angles are the pauli gates?
-        str_s = [s.replace("rx(pi*1)", "x") for s in str_s]
-        str_s = [s.replace("rx(pi*-1)", "x") for s in str_s]
-        str_s = [s.replace("ry(pi*1)", "y") for s in str_s]
-        str_s = [s.replace("ry(pi*-1)", "y") for s in str_s]
-        str_s = [s.replace("rz(pi*1)", "z") for s in str_s]
-        str_s = [s.replace("rz(pi*-1)", "z") for s in str_s]
+        str_s = [s.replace("rx(pi*1.0)", "x") for s in str_s]
+        str_s = [s.replace("rx(pi*-1.0)", "x") for s in str_s]
+        str_s = [s.replace("ry(pi*1.0)", "y") for s in str_s]
+        str_s = [s.replace("ry(pi*-1.0)", "y") for s in str_s]
+        str_s = [s.replace("rz(pi*1.0)", "z") for s in str_s]
+        str_s = [s.replace("rz(pi*-1.0)", "z") for s in str_s]
 
         str_s = [s.replace("cx", "CNOT") for s in str_s]
 
@@ -152,7 +152,6 @@ class PrepareCircuit:
 
         for gate in gate_list:
             if gate[0] == "r":
-                print(gate)
                 which_axis = (0, 0, 0)
                 if gate[1] == "x":
                     which_axis = (1, 0, 0)
@@ -178,6 +177,7 @@ class PrepareCircuit:
                     continue
 
                 if angle_float not in dictionary_decomposed_rotations:
+                    print(gate, "decompose")
                     # decomposition
                     decompo = self.decompose_SK_on_gate(angle_float, which_axis)
                     # store the decomposition

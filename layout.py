@@ -10,128 +10,42 @@ ancilla logical qubits) touches the data qubits.
 Each entry in the matrix represents a d x d patch operated for d rounds
 '''
 
-from enum import Enum
 import random
 
 import layer_map as lll
 import patches_state as ps
+import operationcollection as opc
 
-
-class OperationTypes(Enum):
-    NOOP = 0
-    USE_QUBIT = 1  # measures stabilisers in the patch of loqical qubit
-    USE_ANCILLA = 3
-    USE_DISTILLATION = 7
-    ######################
-    ROTATE_QUBIT = 2 # ancilla qubits are not rotated (at least in this scheme) and therefore this is not applicable to them
-    USE_S_GATE = 4
-    MOVE_PATCH = 6
-    HADAMARD_QUBIT = 8
-
-
-class PlacementStatus(Enum):
-    OK = 0
-    NO_TIME = 1
-    ALREADY_BUSY = 3
-    NO_SPACE = 5
-
-
-class OperationDetails:
-    """
-    The details of an operation. Type, which cells it spans, which data patches it touches...
-    """
-    def __init__(self):
-        # the type of the operation
-        self.op_type = OperationTypes.NOOP
-
-        # the default id of a cell in the 3D space of coordinates
-        self.spans = [0]
-
-        # which data patches are touched by this operation?
-        self.touches = {}
-
-        # self.decorator = OperationTypes.NOOP
-
-
-class OperationCollection:
-    """
-    This class is a time ordered list of IDs of OperationDetails which is attached to each cell in the coordinates
-    There may be multiple operations on a cell -- for the moment
-    For example: distance D operations represented as cubes
-    But also of lesser distance operations: Logical Hadamard in distance zero (?)
-    Or two operations, one following the other, of distance D/2
-    Overall all operations should have total distance D
-    """
-    def __init__(self, first_operation_id=0):
-        self.operations = [first_operation_id]
-
-        # Default value for this is 63
-        # meaning that all sides of the cube are drawn in the color specified
-        # meaning that there is no X operator tracked for this one
-        self.sides_integer_value = 63
-
-    def return_instant_op(self):
-        """
-        Does this list of operations include any distance_zero operation such as Hadamard?
-        :return: the operation type. OperationTypes.NOOP if not
-        """
-        return OperationTypes.NOOP
-
-    def has_single_noop(self, operations_dictionary):
-        if len(self.operations) == 1:
-            operation = operations_dictionary[self.operations[0]]
-            if operation.op_type == OperationTypes.NOOP:
-                return True
-
-        return False
-
-    def get_first_op_id(self):
-        return self.operations[0]
-
-    def replace_single_noop_with_other(self, other_id):
-        self.operations[0] = other_id
-
-    def append_operation(self, other_id):
-        if len(self.operations) == 0:
-            print("ERROR! append_operation should be called only when numbers of operations is larger than one.")
-            return
-        self.operations.append(other_id)
-
-    def get_zero_length_ops(self, operations_dictionary):
-        for op_id in self.operations:
-            op = operations_dictionary[op_id].op_type
-            if op in [OperationTypes.HADAMARD_QUBIT]:
-                return op
-
-        return OperationTypes.NOOP
-
-    def get_non_zero_length_ops(self, operations_dictionary):
-        ret = {}
-        for op_id in self.operations:
-            op = operations_dictionary[op_id].op_type
-            if op not in [OperationTypes.HADAMARD_QUBIT]:
-                ret[op_id] = op
-
-        return ret
-
+# are numpy arrays faster?
+import numpy as np
 
 class CubeLayout:
-    def __init__(self, lll_map):
+    def __init__(self, lll_map, nr_commands):
         print("layout")
 
         self.layer_map = lll_map
 
         # default array is 0,0,1 in time with default op
         # self.coordinates = [[[0]]]
-        self.coordinates = [[[OperationCollection(0)]]]
+        # self.coordinates = [[[OperationCollection(0)]]]
+
+        # use fixed size? for testing maximum size of volume that i can represent without crashing the computer
+        # time_dimension = 10000
+
+        time_dimension = nr_commands
+        # self.coordinates = np.arange(lll_map.dimension_i * lll_map.dimension_j * time_dimension)\
+        #     .reshape(lll_map.dimension_i, lll_map.dimension_j, time_dimension)
+        self.coordinates = np.empty(
+            (lll_map.dimension_i, lll_map.dimension_j, time_dimension),
+            dtype=np.object)
 
         # the default operation is null - nothing
         # the decorator refers to an operation that is instantaneous, like Measurements and Hadamards
-        # self.operations_dictionary = {0: {"op_type": OperationTypes.NOOP,
+        # self.operations_dictionary = {0: {"op_type": opc.OperationTypes.NOOP,
         #                                   "spans": [0],
         #                                   "touches": {},
-        #                                   "decorator": OperationTypes.NOOP}}
-        self.operations_dictionary = {0: OperationDetails()}
+        #                                   "decorator": opc.OperationTypes.NOOP}}
+        self.operations_dictionary = {0: opc.OperationDetails()}
 
         # used to increment the id of an operation
         self.operations_dictionary_id_incr = 1
@@ -139,6 +53,7 @@ class CubeLayout:
         # default setup: cell 0,0,0 has id 0
         self.cell_dictionary = {(0, 0, 0): 0}
 
+        # why is it so high?
         self.current_time_coordinate = 0
 
         self.accommodate_hardware_sizes(lll_map.dimension_i, lll_map.dimension_j)
@@ -209,12 +124,12 @@ class CubeLayout:
             # check if time coordinate is ok
             if coord[2] + time_offset >= self.get_tsize():
                 # problem - it goes outside of the available time
-                return PlacementStatus.NO_TIME
+                return opc.PlacementStatus.NO_TIME
 
             if (coord[0] >= self.get_isize()) or (coord[1] >= self.get_jsize()):
                 # problem - it goes outside of the available space
                 print("ERROR! The coordinate is out of hardware bounds: ->", coord)
-                return PlacementStatus.NO_SPACE
+                return opc.PlacementStatus.NO_SPACE
 
             # get the object holding the collection of operations at the specified
             # 3D coordinate + the time offset of the operation one would like to place
@@ -223,25 +138,25 @@ class CubeLayout:
             # meaning that at these coordinates there is much more than a single NOOP placed
             # then the cell is already busy
             if not current_operation_collection.has_single_noop(self.operations_dictionary):
-                return PlacementStatus.ALREADY_BUSY
+                return opc.PlacementStatus.ALREADY_BUSY
 
         # everything went ok
-        return PlacementStatus.OK
+        return opc.PlacementStatus.OK
 
     def accommodate_object(self, span_set):
         # the total number of times the current_time_coordinate was advanced
         number_of_time_increases = 0
         placement_status = self.check_coordinate_span_set(span_set, number_of_time_increases)
-        while placement_status != PlacementStatus.OK:
-            if placement_status == PlacementStatus.ALREADY_BUSY:
+        while placement_status != opc.PlacementStatus.OK:
+            if placement_status == opc.PlacementStatus.ALREADY_BUSY:
                 # not the time axis is the proble, but the fact that the cell is already occupied
                 self.increase_current_time_coordinate()
                 # update the time coordinates in the span_set
                 number_of_time_increases += 1
-            elif placement_status == PlacementStatus.NO_TIME:
+            elif placement_status == opc.PlacementStatus.NO_TIME:
                 # there is no cell at this coordinate
                 self.add_time_coordinate()
-            elif placement_status == PlacementStatus.NO_SPACE:
+            elif placement_status == opc.PlacementStatus.NO_SPACE:
                 print("ERROR: No space! -- endless loop")
                 return
 
@@ -344,20 +259,24 @@ class CubeLayout:
 
         return None
 
-    def add_NOOP(self, si, sj):
+    def add_NOOP(self, si, sj, st):
         # add a new cell to the dictionary
-        cell_id = self.add_cell_id(si, sj, len(self.coordinates[si][sj]))
+        cell_id = self.add_cell_id(si, sj, st)
 
         # add a new operation
-        new_op = OperationDetails()
-        new_op.spans.append(cell_id)
-
+        new_op = opc.OperationDetails(cell_id)
+        # new_op.spans.append(cell_id)
         op_id = self.add_op_id(new_op)
 
         # mark in the coordinates the op_id
-        new_op_collection = OperationCollection(op_id)
+        new_op_collection = opc.OperationCollection(op_id)
 
-        self.coordinates[si][sj].append(new_op_collection)
+        if st != -1:
+            self.coordinates[si][sj][st] = new_op_collection
+        # else:
+        #     # hope this branch does not get executed
+        #     # numpy array does not allow append
+        #     self.coordinates[si][sj].append(new_op_collection)
 
     def create_use_data(self, qubit_coord, time_coordinate=None):
         '''
@@ -369,7 +288,7 @@ class CubeLayout:
         '''
         if time_coordinate is None:
             time_coordinate = self.current_time_coordinate
-        return OperationTypes.USE_QUBIT, [(qubit_coord[0], qubit_coord[1], time_coordinate)], [], []
+        return opc.OperationTypes.USE_QUBIT, [(qubit_coord[0], qubit_coord[1], time_coordinate)], [], []
 
     def create_rotation(self, qubit):
         # requires two timesteps
@@ -389,7 +308,7 @@ class CubeLayout:
 
         touch_set_meas = [cell_1, cell_3]
 
-        return OperationTypes.USE_ANCILLA, span_set, touch_set_data, touch_set_meas
+        return opc.OperationTypes.USE_ANCILLA, span_set, touch_set_data, touch_set_meas
 
     def create_distillation(self):
         # assume a single distillation per layer
@@ -410,7 +329,7 @@ class CubeLayout:
         touch_set_data = []
         touch_set_meas = []
 
-        return OperationTypes.USE_DISTILLATION, span_set, touch_set_data, touch_set_meas
+        return opc.OperationTypes.USE_DISTILLATION, span_set, touch_set_data, touch_set_meas
 
 
     def compute_qubits_for_s_gate(self, qub1_coord):
@@ -553,7 +472,7 @@ class CubeLayout:
                 , anc2_coord + (self.current_time_coordinate, )
                 , anc3_coord + (self.current_time_coordinate, )]
 
-            sets = (OperationTypes.MOVE_PATCH, span_set, [], [])
+            sets = (opc.OperationTypes.MOVE_PATCH, span_set, [], [])
             self.configure_operation(*sets)
 
             # filter the qubit that is moved
@@ -578,7 +497,7 @@ class CubeLayout:
             , anc2_coord + (self.current_time_coordinate + 1,)
         ]
 
-        sets = (OperationTypes.USE_S_GATE, span_set, [], [])
+        sets = (opc.OperationTypes.USE_S_GATE, span_set, [], [])
         self.configure_operation(*sets)
 
         # filter the current qubit from the set of things to update
@@ -600,7 +519,7 @@ class CubeLayout:
                 , anc2_coord + (self.current_time_coordinate,)
                 , anc3_coord + (self.current_time_coordinate,)]
 
-            sets = (OperationTypes.MOVE_PATCH, span_set, [], [])
+            sets = (opc.OperationTypes.MOVE_PATCH, span_set, [], [])
             self.configure_operation(*sets)
 
             # filter the qubit that is moved
@@ -720,7 +639,7 @@ class CubeLayout:
 
             first_sub_chain = False
 
-        return OperationTypes.USE_ANCILLA, span_set, touch_set_data, touch_set_meas
+        return opc.OperationTypes.USE_ANCILLA, span_set, touch_set_data, touch_set_meas
 
     def configure_operation(self, op_type, span_set, touch_set_data, touch_set_meas):
         """
@@ -764,7 +683,7 @@ class CubeLayout:
         for qubit in touch_set_data:
             # idx = self.get_cell_id(*qubit)
             # op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
-            # if self.operations_dictionary[op_id].op_type == OperationTypes.NOOP:
+            # if self.operations_dictionary[op_id].op_type == opc.OperationTypes.NOOP:
             if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
                 # take the type from the layer_map
                 self.debug_cell(qubit[0], qubit[1], qubit[2])
@@ -772,7 +691,7 @@ class CubeLayout:
         for qubit in touch_set_meas:
             # idx = self.get_cell_id(*qubit)
             # op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
-            # if self.operations_dictionary[op_id].op_type == OperationTypes.NOOP:
+            # if self.operations_dictionary[op_id].op_type == opc.OperationTypes.NOOP:
             if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
                 # take the type from the layer_map
                 self.debug_cell(qubit[0], qubit[1], qubit[2])
@@ -781,10 +700,10 @@ class CubeLayout:
         # new_op = {"op_type": op_type,
         #           "spans": span_set_idx,
         #           "touches": touch_idx,
-        #           "decorator": OperationTypes.NOOP}
+        #           "decorator": opc.OperationTypes.NOOP}
 
         # this is the new operation in the collection of operations
-        new_op = OperationDetails()
+        new_op = opc.OperationDetails()
         new_op.op_type = op_type
         new_op.spans = span_set_idx
         new_op.touches = touch_idx
@@ -823,24 +742,29 @@ class CubeLayout:
         :return: nothing
         '''
 
-        # add missing rows
-        dif_i = mi - self.get_isize()
-        for ri in range(dif_i):
-            self.coordinates.append([])
+        # Nothing should be missing, because the array is fixed from the constructor
+        # Nothing is dynamic --> too slow
+        #
+        # # add missing rows
+        # dif_i = mi - self.get_isize()
+        # for ri in range(dif_i):
+        #     self.coordinates.append([])
+        #
+        # for si in range(self.get_isize()):
+        #     # add missing columns
+        #     # it is not guaranteed, at this point, that len is equal for all rows
+        #     dif_j = mj - len(self.coordinates[si])
+        #     for rj in range(dif_j):
+        #         self.coordinates[si].append([])
 
-        for si in range(self.get_isize()):
-            # add missing columns
-            # it is not guaranteed, at this point, that len is equal for all rows
-            dif_j = mj - len(self.coordinates[si])
-            for rj in range(dif_j):
-                self.coordinates[si].append([])
-
-        mt = self.get_tsize()
+        # mt = self.get_tsize()
         for si in range(self.get_isize()):
             for sj in range(self.get_jsize()):
-                dif_t = mt - len(self.coordinates[si][sj])
+                # dif_t = mt - len(self.coordinates[si][sj])
+                dif_t = len(self.coordinates[si][sj])
                 for rt in range(dif_t):
-                    self.add_NOOP(si, sj)
+                    # print((si, sj, rt))
+                    self.add_NOOP(si, sj, rt)
 
 
     def place_random(self, mt):
@@ -859,19 +783,19 @@ class CubeLayout:
             for j in range(self.get_jsize()):
                 for t in range(self.get_tsize()):
                     random_i = random.randint(0, 1)
-                    op_type = OperationTypes.NOOP
+                    op_type = opc.OperationTypes.NOOP
 
                     # what is this coordinate in the logical layout?
                     map_entry = self.layer_map.placement_map[i][j]
                     if map_entry == lll.MapCellType.ANCILLA:
                         if random_i == 1:
-                            op_type = OperationTypes.USE_ANCILLA
+                            op_type = opc.OperationTypes.USE_ANCILLA
                     elif map_entry == lll.MapCellType.QUBIT:
                         if random_i == 1:
-                            op_type = OperationTypes.USE_QUBIT
+                            op_type = opc.OperationTypes.USE_QUBIT
                     elif map_entry == lll.MapCellType.DISTILLATION:
                             #if random_i == 1:
-                                op_type = OperationTypes.USE_DISTILLATION
+                                op_type = opc.OperationTypes.USE_DISTILLATION
 
                     op_id = self.coordinates[i][j][t]
                     self.operations_dictionary[op_id]["op_type"] = op_type
@@ -900,14 +824,14 @@ class CubeLayout:
         :param t:
         :return: Nothing
         """
-        op_t = OperationTypes.NOOP
+        op_t = opc.OperationTypes.NOOP
         xxx = self.layer_map.placement_map[i][j]
         if xxx == lll.MapCellType.QUBIT:
-            op_t = OperationTypes.USE_QUBIT
+            op_t = opc.OperationTypes.USE_QUBIT
         elif xxx == lll.MapCellType.ANCILLA:
-            op_t = OperationTypes.USE_ANCILLA
+            op_t = opc.OperationTypes.USE_ANCILLA
         elif xxx == lll.MapCellType.DISTILLATION:
-            op_t = OperationTypes.USE_DISTILLATION
+            op_t = opc.OperationTypes.USE_DISTILLATION
 
         op_id = self.coordinates[i][j][t].operations[0]
         self.operations_dictionary[op_id].op_type = op_t

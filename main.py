@@ -6,6 +6,7 @@ import visualise_layout as vla
 import layer_map as lll
 import patches_state as ps
 import cube_to_physical as qre
+import operationcollection as opc
 
 import cirqinterface as ci
 
@@ -34,23 +35,23 @@ def main():
 
     interface = ci.CirqInterface()
 
-    # cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
+    cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
 
-    cirq_circuit = interface.openfermion_circuit()
+    # cirq_circuit = interface.openfermion_circuit()
 
     prep = pc.PrepareCircuit()
     gate_list = prep.parse_to_my_string_format(cirq_circuit)
 
+    # A compaction of the SK decomposition would be good. Too many gates are output.
+    # This will start an instance of the SKC decomposer
     gate_list = prep.decompose_arbitrary_rotations(gate_list)
     # print(gate_list)
 
     # take the gates to M?? commands
     commands = prep.replace_gates_with_multibody(gate_list)
 
-    # for comm in commands:
-    #     print(comm)
-
     print(len(commands))
+    print(commands)
 
     return
 
@@ -75,14 +76,24 @@ def main():
     # this is the layout, which needs to be first initialised
     lay = None
 
+    # determine the hardcoded time depth of a distillation and add some delay
+    height_of_distillation = int(layer_map.distillation_t_length * 1.5)
+
+    # worst case: each command is a distillation
+    nr_commands = len(commands) * height_of_distillation
+
+    # there is a MAX the current version can handle
+    if nr_commands >= 10000:
+        nr_commands = 10000
+
     if not commands[0].startswith("INIT"):
         # first line should always be INIT
         print("ERROR: No INIT command for the layer map")
         return
 
-
-    for command in commands:
-        print(command)
+    # limit the maximum commands to nr_commands, because otherwise memory explodes
+    for command in commands[0:nr_commands]:
+        # print(command)
 
         # each command should add a new time step?
         command_splits = command.split(" ")
@@ -96,7 +107,7 @@ def main():
             layer_map.setup_arrangement_one(int(command_splits[1]), patches_state)
 
             # initialise the cubic layout
-            lay = la.CubeLayout(layer_map)
+            lay = la.CubeLayout(layer_map, nr_commands)
 
             # for debugging purposes place some cubes to see if the layout is correct
             lay.debug_layer_map()
@@ -188,7 +199,7 @@ def main():
             qub1_coord = lay.layer_map.get_qubit_coordinate_2d(qubit_string)
 
             span_set = [(*qub1_coord, lay.current_time_coordinate)]
-            sets = (la.OperationTypes.HADAMARD_QUBIT, span_set, [], [])
+            sets = (opc.OperationTypes.HADAMARD_QUBIT, span_set, [], [])
             lay.configure_operation(*sets)
 
             coordinates_all_active_patches = filter_active_patches(lay, patches_state, filter_out=command_splits[1:])

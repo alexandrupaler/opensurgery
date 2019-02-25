@@ -49,7 +49,7 @@ class CirqInterface:
 
         # print(c.to_qasm())
 
-        return c
+        return c.to_qasm()
 
     # Convert circuits to CZ and single-qubit gates
     # ---------------------------------------------
