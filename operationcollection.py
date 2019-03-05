@@ -60,12 +60,12 @@ class OperationCollection:
         # meaning that there is no X operator tracked for this one
         self.sides_integer_value = 63
 
-    def return_instant_op(self):
-        """
-        Does this list of operations include any distance_zero operation such as Hadamard?
-        :return: the operation type. OperationTypes.NOOP if not
-        """
-        return OperationTypes.NOOP
+    # def return_instant_op(self):
+    #     """
+    #     Does this list of operations include any distance_zero operation such as Hadamard?
+    #     :return: the operation type. OperationTypes.NOOP if not
+    #     """
+    #     return OperationTypes.NOOP
 
     def has_single_noop(self, operations_dictionary):
         if len(self.operations) == 1:

@@ -44,6 +44,10 @@ class VisualiseLayout:
 
                     # take each operation from the collection and make a cube out of it
 
+                    # filter
+                    if ops_collection is None:
+                        continue
+
                     for op_id in ops_collection.operations:
                         op_type = layout.operations_dictionary[op_id].op_type
 
@@ -59,9 +63,9 @@ class VisualiseLayout:
                             # hard coded ...
                             decorator = "H"
 
-                        # filter
-                        if ops_collection.has_single_noop(layout.operations_dictionary) and remove_noop:
-                            continue
+                        # # filter
+                        # if ops_collection.has_single_noop(layout.operations_dictionary) and remove_noop:
+                        #     continue
 
                         sides = ops_collection.sides_integer_value
 

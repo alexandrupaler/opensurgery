@@ -21,8 +21,7 @@ import numpy as np
 
 class CubeLayout:
     def __init__(self, lll_map, nr_commands):
-        print("layout")
-
+        print("layout begin...")
         self.layer_map = lll_map
 
         # default array is 0,0,1 in time with default op
@@ -38,6 +37,8 @@ class CubeLayout:
         self.coordinates = np.empty(
             (lll_map.dimension_i, lll_map.dimension_j, time_dimension),
             dtype=np.object)
+        # I would assume that everything is initialised to None
+        # OperationType.NOOP is None from now on
 
         # the default operation is null - nothing
         # the decorator refers to an operation that is instantaneous, like Measurements and Hadamards
@@ -57,6 +58,7 @@ class CubeLayout:
         self.current_time_coordinate = 0
 
         self.accommodate_hardware_sizes(lll_map.dimension_i, lll_map.dimension_j)
+        print("...layout end")
 
     def get_isize(self):
         return len(self.coordinates)
@@ -138,7 +140,8 @@ class CubeLayout:
             # if at this coordinate, there is something to execute
             # meaning that at these coordinates there is much more than a single NOOP placed
             # then the cell is already busy
-            if not current_operation_collection.has_single_noop(self.operations_dictionary):
+            # if not current_operation_collection.has_single_noop(self.operations_dictionary):
+            if current_operation_collection is not None:
                 return opc.PlacementStatus.ALREADY_BUSY
 
         # everything went ok
@@ -451,7 +454,6 @@ class CubeLayout:
             qub1_coord, qub2_coord, anc1_coord, anc2_coord, anc3_coord = self.compute_qubits_for_s_gate_ancilla(qub1_coord)
         else:
             qub1_coord, qub2_coord, anc1_coord, anc2_coord, anc3_coord = self.compute_qubits_for_s_gate(qub1_coord)
-            print(anc3_coord)
 
         qub2_name = self.find_name_for_qubit_coordinate(qub2_coord)
         anc3_name = self.find_name_for_qubit_coordinate(anc3_coord)
@@ -662,6 +664,8 @@ class CubeLayout:
         touch_set_meas = self.update_coordinate_set_from_time_delta(touch_set_meas, nr_time_increases)
 
         # add the coordinates, if they do not exist
+        for coord in (span_set + touch_set_meas + touch_set_data):
+            self.add_cell_id(*coord)
 
         # create the index sets instead of coordinate sets
         span_set_idx = self.transform_coordinate_set_into_index_set(span_set)
@@ -687,7 +691,8 @@ class CubeLayout:
             # idx = self.get_cell_id(*qubit)
             # op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
             # if self.operations_dictionary[op_id].op_type == opc.OperationTypes.NOOP:
-            if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
+            # if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
+            if self.coordinates[qubit[0]][qubit[1]][qubit[2]] is not None:
                 # take the type from the layer_map
                 self.debug_cell(qubit[0], qubit[1], qubit[2])
 
@@ -695,7 +700,8 @@ class CubeLayout:
             # idx = self.get_cell_id(*qubit)
             # op_id = self.coordinates[qubit[0]][qubit[1]][qubit[2]]
             # if self.operations_dictionary[op_id].op_type == opc.OperationTypes.NOOP:
-            if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
+            # if self.coordinates[qubit[0]][qubit[1]][qubit[2]].has_single_noop(self.operations_dictionary):
+            if self.coordinates[qubit[0]][qubit[1]][qubit[2]] is not None:
                 # take the type from the layer_map
                 self.debug_cell(qubit[0], qubit[1], qubit[2])
 
@@ -720,7 +726,12 @@ class CubeLayout:
 
             # I assume this cell has a single NOOP, which will not be used anymore
             # I can remove it from the dictionary of operations
-            if ops_collection.has_single_noop(self.operations_dictionary):
+            # if ops_collection.has_single_noop(self.operations_dictionary):
+            if ops_collection is None:
+                # add a NOOP
+                self.add_NOOP(coord[0], coord[1], coord[2])
+                ops_collection = self.coordinates[coord[0]][coord[1]][coord[2]]
+
                 # get the old id
                 old_op_id = ops_collection.get_first_op_id()
                 # replace it with the new id
@@ -760,14 +771,14 @@ class CubeLayout:
         #     for rj in range(dif_j):
         #         self.coordinates[si].append([])
 
-        # mt = self.get_tsize()
-        for si in range(self.get_isize()):
-            for sj in range(self.get_jsize()):
-                # dif_t = mt - len(self.coordinates[si][sj])
-                dif_t = len(self.coordinates[si][sj])
-                for rt in range(dif_t):
-                    # print((si, sj, rt))
-                    self.add_NOOP(si, sj, rt)
+        # # mt = self.get_tsize()
+        # for si in range(self.get_isize()):
+        #     for sj in range(self.get_jsize()):
+        #         # dif_t = mt - len(self.coordinates[si][sj])
+        #         dif_t = len(self.coordinates[si][sj])
+        #         for rt in range(dif_t):
+        #             # print((si, sj, rt))
+        #             self.add_NOOP(si, sj, rt)
 
 
     def place_random(self, mt):
@@ -835,6 +846,9 @@ class CubeLayout:
             op_t = opc.OperationTypes.USE_ANCILLA
         elif xxx == lll.MapCellType.DISTILLATION:
             op_t = opc.OperationTypes.USE_DISTILLATION
+
+        if self.coordinates[i][j][t] is None:
+            self.add_NOOP(i, j, t)
 
         op_id = self.coordinates[i][j][t].operations[0]
         self.operations_dictionary[op_id].op_type = op_t
