@@ -183,7 +183,7 @@ class CubeLayout:
             ret.append(self.layer_map.get_qubit_coordinate_2d(key))
         return ret
 
-    def move_current_time_coordinate_to_max_from_coordinates(self, coordinate_sets, patches_state, patches_to_extend_set=None):
+    def move_curr_time_coord_to_max_from_coords(self, coordinate_sets, patches_state, patches_to_extend_set=None):
         '''
         Assume that only one operation at a time is processed
         This means that the coordinates of this operation are between current_time_coordinate and the maximum time
@@ -333,10 +333,6 @@ class CubeLayout:
 
 
     def compute_qubits_for_s_gate(self, qub1_coord):
-        # coordinates of the data qubit
-        # qub1_coord = self.layer_map.circuit_qubits_to_patches[qubit]
-        # qub1_coord = self.layer_map.get_qubit_coordinate_2d(qubit)
-
         """
             Which data patch closest to the current one should be moved?
         """
@@ -346,6 +342,7 @@ class CubeLayout:
         idx_closest = 0
 
         set_of_ancillas = []
+        # compute direction of qub1 qub2
         direction_q = (0, 0)
 
         while take_next and (idx_closest < len(all_closest)):
@@ -357,23 +354,27 @@ class CubeLayout:
                 """
                     A patch should be away from the boundaries of the checker board
                 """
-                part2_d = (
-                abs(qub2_coord[0] - self.layer_map.dimension_i), abs(qub2_coord[1] - self.layer_map.dimension_j))
-                dist_sequence = qub2_coord + part2_d
+                # compute direction of qub1 qub2
+                direction_q = (qub1_coord[0] - qub2_coord[0], qub1_coord[1] - qub2_coord[1])
 
-                # Assume everything is OK
                 take_next = False
-                for x in dist_sequence:
-                    # the neighbour patch is not away from the boundary of the board
-                    if x < 1:
+                if direction_q[0] == 0 and direction_q[1] < 0:
+                    if qub2_coord[1] > self.layer_map.dimension_j - 2:
+                        take_next = True
+                elif direction_q[0] == 0 and direction_q[1] > 0:
+                    if qub2_coord[1] < 1:
+                        take_next = True
+                elif direction_q[1] == 0 and direction_q[0] < 0:
+                    if qub2_coord[0] > self.layer_map.dimension_i - 2:
+                        take_next = True
+                elif direction_q[1] == 0 and direction_q[0] > 0:
+                    if qub2_coord[0] < 1:
                         take_next = True
 
             # There is something wrong here
             if take_next and idx_closest == len(all_closest):
-                print("ERROR! No patch to take and to move for the S gate to work")
-
-            # compute direction of qub1 qub2
-            direction_q = (qub1_coord[0] - qub2_coord[0], qub1_coord[1] - qub2_coord[1])
+                raise Exception("ERROR! No patch to take and to move for the S gate to work")
+                # print("ERROR! No patch to take and to move for the S gate to work")
 
             # there are two perpendicular directions of direction_q
             directions_p = [
@@ -449,6 +450,7 @@ class CubeLayout:
             qub1_coord, qub2_coord, anc1_coord, anc2_coord, anc3_coord = self.compute_qubits_for_s_gate_ancilla(qub1_coord)
         else:
             qub1_coord, qub2_coord, anc1_coord, anc2_coord, anc3_coord = self.compute_qubits_for_s_gate(qub1_coord)
+            print(anc3_coord)
 
         qub2_name = self.find_name_for_qubit_coordinate(qub2_coord)
         anc3_name = self.find_name_for_qubit_coordinate(anc3_coord)
@@ -477,7 +479,7 @@ class CubeLayout:
 
             # filter the qubit that is moved
             tmp_active_patches = [x for x in tmp_active_patches if x != qub2_name]
-            self.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, tmp_active_patches)
+            self.move_curr_time_coord_to_max_from_coords(sets, patches_state, tmp_active_patches)
             # add the destination
             if anc3_name != "":
                 # different from noname
@@ -502,7 +504,7 @@ class CubeLayout:
 
         # filter the current qubit from the set of things to update
         tmp_active_patches = [x for x in tmp_active_patches if x != qub_string]
-        self.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, tmp_active_patches)
+        self.move_curr_time_coord_to_max_from_coords(sets, patches_state, tmp_active_patches)
         # put it back
         tmp_active_patches.append(qub_string)
 
@@ -524,7 +526,7 @@ class CubeLayout:
 
             # filter the qubit that is moved
             tmp_active_patches = [x for x in tmp_active_patches if x != anc3_name]
-            self.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, tmp_active_patches)
+            self.move_curr_time_coord_to_max_from_coords(sets, patches_state, tmp_active_patches)
             # add the destination
             if qub2_name != "":
                 tmp_active_patches.append(qub2_name)

@@ -15,12 +15,77 @@ def write_json(object_to_store):
     with open('layout.json', 'w') as outfile:
         json.dump(object_to_store, outfile)
 
-def process_multi_body_format(commands):
+def generate_random_circuits(random_configs):
     """
-    Entry point is a multibody measurement format
-    :param commands: list of commands. Accepted are INIT, NEED A, MZZ, MXX, MZ, MX, S, H
+    Used for generating instances of random circuits that are going to be resource estimated
     :return:
     """
+
+    intf = ci.CirqInterface()
+
+    for expi in range(len(random_configs["qubits"])):
+        # 100 trials for each circuit configuration
+        for nrtrial in range(10):
+            circ = intf.random_circuit(random_configs["qubits"][expi],
+                                       random_configs["gates"][expi],
+                                       random_configs["t_ratio"][expi])
+
+            # save the circuit to a file
+            fname = "random/rand_" + str((nrtrial,
+                                          random_configs["qubits"][expi],
+                                          random_configs["gates"][expi],
+                                          random_configs["t_ratio"][expi])) + ".circ"
+            fname = fname.replace(", ", "_")
+            print(fname)
+            with open(fname, 'w') as circfile:
+                circfile.write(circ)
+
+
+def load_random_circuits(random_configs):
+    """
+        Reads all the benchmarks into an array.
+        It will be heavy on the memory
+    """
+    circuit_contents = []
+
+    for expi in range(len(random_configs["qubits"])):
+        # 100 trials for each circuit configuration
+        for nrtrial in range(10):
+            # save the circuit to a file
+            fname = "random/rand_" + str((nrtrial,
+                                          random_configs["qubits"][expi],
+                                          random_configs["gates"][expi],
+                                          random_configs["t_ratio"][expi])) + ".circ"
+            fname = fname.replace(", ", "_")
+            print("read file:" + fname)
+            with open(fname, 'r') as circfile:
+                # read entire file into string stored
+                circuit_contents.append(circfile.read())
+
+    return circuit_contents
+
+
+def benchmark_layout_method():
+
+    random_configs = {}
+    # random_configs["qubits"]  = [10,      20,     100,    200,    500]
+    # random_configs["gates"]   = [100,     100,    1000,   1000,   3000]
+    # random_configs["t_ratio"] = [50,      50,     50,     50,     50]
+
+    random_configs["qubits"] = [500]
+    random_configs["gates"] = [2000]
+    random_configs["t_ratio"] = [50]
+
+    print("Random Circuits Benchmark")
+    # use if new random benchmarks should be generated
+    generate_random_circuits(random_configs)
+
+    # load the benchmarking circuits
+    benchmark_circuits = load_random_circuits(random_configs)
+
+    for circuit in benchmark_circuits:
+        print(".....")
+        process_string_of_circuit(circuit)
 
 def main():
 
@@ -31,16 +96,27 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
+    benchmark_layout_method()
+    #
+    return
+
     print("OpenSurgery (version Santa Barbara)\n")
 
     interface = ci.CirqInterface()
 
     cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
 
+    local_lay = process_string_of_circuit(cirq_circuit)
+
+    visualise_layout(local_lay)
+
+
+def process_string_of_circuit(qasm_cirq_circuit):
+
     # cirq_circuit = interface.openfermion_circuit()
 
     prep = pc.PrepareCircuit()
-    gate_list = prep.parse_to_my_string_format(cirq_circuit)
+    gate_list = prep.parse_to_my_string_format(qasm_cirq_circuit)
 
     # A compaction of the SK decomposition would be good. Too many gates are output.
     # This will start an instance of the SKC decomposer
@@ -50,15 +126,16 @@ def main():
     # take the gates to M?? commands
     commands = prep.replace_gates_with_multibody(gate_list)
 
-    print(len(commands))
-    print(commands)
-
-    return
+    # print(len(commands))
+    # print(commands)
+    #
+    # return
 
     # load from file
     # commands = prep.load_multibody_format()
 
     # tests begin
+    # commands = ['INIT 10', 'NEED A', 'MXX A 3', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
     # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
     # tests end
@@ -73,18 +150,23 @@ def main():
     #
     layer_map = lll.LayerMap()
 
-    # this is the layout, which needs to be first initialised
+    #
+    # The LAYOUT, will be initialised after an INIT command
+    #
     lay = None
 
     # determine the hardcoded time depth of a distillation and add some delay
-    height_of_distillation = int(layer_map.distillation_t_length * 1.5)
+    height_of_distillation = int(layer_map.distillation_t_length * 1)
 
     # worst case: each command is a distillation
-    nr_commands = len(commands) * height_of_distillation
+    # nr_commands = (len(commands) / 2) * height_of_distillation
 
-    # there is a MAX the current version can handle
-    if nr_commands >= 10000:
-        nr_commands = 10000
+    nr_commands = len(commands)
+
+    # # there is a MAX the current version can handle
+    # if nr_commands >= 10000:
+    #     print("MAX Commands was limited to 10000")
+    #     nr_commands = 10000
 
     if not commands[0].startswith("INIT"):
         # first line should always be INIT
@@ -125,7 +207,7 @@ def main():
 
             # Get the 2D coordinates of the active patches
             filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=[])
-            lay.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, filtered_active_patches)
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
 
             # the distilled A state is available
             patches_state.add_active_patch("A")
@@ -139,7 +221,7 @@ def main():
             lay.configure_operation(*sets)
 
             filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=qubit_list)
-            lay.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, filtered_active_patches)
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
 
         elif command_splits[0] == "MXX":
             # for the moment no difference between MXX and MZZ
@@ -150,7 +232,7 @@ def main():
             lay.configure_operation(*sets)
 
             filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=qubit_list)
-            lay.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, filtered_active_patches)
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
 
         elif (command_splits[0] == "S") or (command_splits[0] == "V"):
             # I will tread S and V the same
@@ -185,13 +267,16 @@ def main():
         #
         #
         # the following are time-depth zero operations
-        # which, for the moment, are not explicitly drawn
-        elif command_splits[0] == "MX":
-            continue
-        elif command_splits[0] == "MZ":
-            continue
-        elif command_splits[0] == "H":
+        # after their execution the patch is error corrected for time equal the distance
+        # elif command_splits[0] == "MX":
+        #     continue
+        # elif command_splits[0] == "MZ":
+        #     continue
+        # elif command_splits[0] == "H":
+        elif command_splits[0] in ["MX", "MZ", "H"]:
             # this adds a decorator to the patch
+            # this is like worst case measurements - keep the qubits alive for another d, and only then measure
+            # this is not really necessary...
             # if the cell does not exist, the decorator cannot be added
 
             # coordinates of the data qubit
@@ -199,21 +284,30 @@ def main():
             qub1_coord = lay.layer_map.get_qubit_coordinate_2d(qubit_string)
 
             span_set = [(*qub1_coord, lay.current_time_coordinate)]
-            sets = (opc.OperationTypes.HADAMARD_QUBIT, span_set, [], [])
+
+            curr_op_type = opc.OperationTypes.HADAMARD_QUBIT
+            if command_splits[0] == "MX":
+                curr_op_type = opc.OperationTypes.MX_QUBIT
+            elif command_splits[0] == "MZ":
+                curr_op_type = opc.OperationTypes.MZ_QUBIT
+
+            sets = (curr_op_type, span_set, [], [])
             lay.configure_operation(*sets)
 
             coordinates_all_active_patches = filter_active_patches(lay, patches_state, filter_out=command_splits[1:])
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, coordinates_all_active_patches)
 
-            lay.move_current_time_coordinate_to_max_from_coordinates(sets, patches_state, coordinates_all_active_patches)
+            # if command_splits[0] in ["MX", "MZ"]:
+            #     continue
 
         #
         # If this is a measurement that consumed the A state
         # then the state will not be available any more
         #
-        if ("A" in command_splits) and command_splits[0].startswith("M"):
+        if ("A" in command_splits) and (command_splits[0] in ["MX", "MZ"]):
             patches_state.remove_active_patch("A")
 
-        if ("ANCILLA" in command_splits) and command_splits[0].startswith("M"):
+        if ("ANCILLA" in command_splits) and (command_splits[0] in ["MX", "MZ"]):
             patches_state.remove_active_patch("ANCILLA")
 
     # Visual Debug the layer map layout
@@ -225,21 +319,29 @@ def main():
     """
         Estimate the resources
     """
-    max_log_qubits = len(layer_map.get_potential_data_patches_coordinates_2d())
-    max_log_qubits += len(layer_map.get_potential_ancilla_patches_coordinates_2d())
+    # data patches + ancilla patches + distillation patches
+    max_log_qubits = layer_map.get_total_number_of_patches()
 
     # TODO: This is not really correct, because I need to send as parameter the depth of the geometry
-    # TODO: Correct
-    total_t_gates = commands.count("NEED A")
-    res_values = qre.compute_physical_resources(total_t_gates, max_log_qubits)
-    print("Resource estimation (qubits, time): ", res_values)
+    # TODO: Correct this parameter to get the depth of the geometry
+    t_count = commands.count("NEED A")
 
-    # """
-    # Write the layout to disk - for visualisation purposes
-    # """
-    # v_layout = vla.VisualiseLayout()
-    # json_result = v_layout.visualise_cube(lay, remove_noop=True)
-    # write_json(json_result)
+    max_time_depth = lay.current_time_coordinate
+
+    # estimate the resources
+    res_values = qre.compute_physical_resources(t_count, max_time_depth, max_log_qubits)
+    print("Resource estimation phys. qubits, time, t_count, time, log_qub: ", res_values, t_count, max_time_depth, max_log_qubits)
+
+    return lay
+
+
+def visualise_layout(lay):
+    """
+    Write the layout to disk - for visualisation purposes
+    """
+    v_layout = vla.VisualiseLayout()
+    json_result = v_layout.visualise_cube(lay, remove_noop=True)
+    write_json(json_result)
 
 
 def filter_active_patches(lay, patches_state, filter_out=[]):

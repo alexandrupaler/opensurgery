@@ -2,25 +2,30 @@
     This class takes a layout
 '''
 import layout as la
+import operationcollection as opc
 
 class VisualiseLayout:
     def __init__(self):
         print("visual debug")
 
     def get_color(self, op_type):
-        if op_type == la.OperationTypes.NOOP:
+        if op_type == opc.OperationTypes.NOOP:
             return "white"
-        elif op_type == la.OperationTypes.USE_DISTILLATION:
+        elif op_type == opc.OperationTypes.USE_DISTILLATION:
             return "magenta"
-        elif op_type == la.OperationTypes.USE_QUBIT:
+        elif op_type == opc.OperationTypes.USE_QUBIT:
             return "red"
-        elif op_type == la.OperationTypes.USE_ANCILLA:
+        elif op_type == opc.OperationTypes.USE_ANCILLA:
             return "yellow"
-        elif op_type == la.OperationTypes.USE_S_GATE:
+        elif op_type == opc.OperationTypes.USE_S_GATE:
             return "green"
-        elif op_type == la.OperationTypes.MOVE_PATCH:
+        elif op_type == opc.OperationTypes.MOVE_PATCH:
             return "orange"
-        elif op_type == la.OperationTypes.HADAMARD_QUBIT:
+        elif op_type == opc.OperationTypes.HADAMARD_QUBIT:
+            return "cyan"
+        elif op_type == opc.OperationTypes.MX_QUBIT:
+            return "cyan"
+        elif op_type == opc.OperationTypes.MZ_QUBIT:
             return "cyan"
 
     def visualise_cube(self, layout, remove_noop):
@@ -46,7 +51,12 @@ class VisualiseLayout:
                         color = self.get_color(op_type)
 
                         decorator = "."
-                        if ops_collection.get_zero_length_ops(layout.operations_dictionary) == la.OperationTypes.HADAMARD_QUBIT:
+                        dec_set = [opc.OperationTypes.HADAMARD_QUBIT,
+                                   opc.OperationTypes.MX_QUBIT,
+                                   opc.OperationTypes.MZ_QUBIT]
+                        if ops_collection.get_zero_length_ops(layout.operations_dictionary) in dec_set:
+                            # force all decorators to behave the same
+                            # hard coded ...
                             decorator = "H"
 
                         # filter
@@ -58,7 +68,7 @@ class VisualiseLayout:
                         # sides = 60
                         # # when default this means that the volume is not used
                         # # ancillas do not rotate their X or Z?
-                        # if op_type in [la.OperationTypes.NOOP, la.OperationTypes.USE_ANCILLA]:
+                        # if op_type in [opc.OperationTypes.NOOP, opc.OperationTypes.USE_ANCILLA]:
                         #     sides = 63
 
                         node_value = {"id": cell_id,

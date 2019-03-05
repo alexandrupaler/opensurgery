@@ -3,6 +3,7 @@ from enum import Enum
 # are numpy arrays faster?
 import numpy as np
 
+
 class OperationTypes(Enum):
     NOOP = 0
     USE_QUBIT = 1  # measures stabilisers in the patch of loqical qubit
@@ -13,6 +14,8 @@ class OperationTypes(Enum):
     USE_S_GATE = 4
     MOVE_PATCH = 6
     HADAMARD_QUBIT = 8
+    MX_QUBIT = 10
+    MZ_QUBIT = 12
 
 
 class PlacementStatus(Enum):

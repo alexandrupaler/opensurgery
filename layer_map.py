@@ -16,10 +16,12 @@ class LayerMap:
         self.dimension_i = -1
         self.dimension_j = -1
 
-        # hard coded dimensions of the distillation
+        # hard coded dimensions of single layer distillation
+        # assuming two levels of distillation are necessary
+        # using the dimensions from https://arxiv.org/pdf/1808.06709.pdf
         self.distillation_i_length = 4
         self.distillation_j_length = 8
-        self.distillation_t_length = 10
+        self.distillation_t_length = 8
 
         # ancilla coordinate will be changed when the placement_one method is called
         self.circuit_qubits_to_patches = {'A': (3, 0), 'ANCILLA': (4, 0)}
@@ -27,6 +29,7 @@ class LayerMap:
         # collection of routes between pairs of ancilla patches
         # indexed by tuples formed of ancilla patch 2D coordinates
         self.routes = {}
+        self.grid_graph = None
 
     def compute_routes_between_qubits(self):
         '''
@@ -37,44 +40,49 @@ class LayerMap:
         :return: nothing
         '''
 
+        if self.grid_graph != None:
+            raise Exception("The layer map is already arranged!")
+
         ancilla_patch_coordinates_2d = self.get_potential_ancilla_patches_coordinates_2d()
 
         # begin version two with networkx
-        grid_graph = nx.grid_2d_graph(self.dimension_i, self.dimension_j)
+        self.grid_graph = nx.grid_2d_graph(self.dimension_i, self.dimension_j)
         for qi in range(self.dimension_i):
             for qj in range(self.dimension_j):
                 # consider only ANCILLA patches
                 coord_ancilla = (qi, qj)
                 if coord_ancilla not in ancilla_patch_coordinates_2d:
                     # if it is not ancilla, remove it
-                    grid_graph.remove_node((qi, qj))
+                    self.grid_graph.remove_node((qi, qj))
         # end new version
 
+        # #
+        # # Compute routes between pairs of ancilla coordinates
+        # #
+        # for coord_ancilla1 in ancilla_patch_coordinates_2d:
+        #     for coord_ancilla2 in ancilla_patch_coordinates_2d:
         #
-        # Compute routes between pairs of ancilla coordinates
+        #         # skip routes between the same cell?
+        #         # maybe this should not be skipped
+        #         if coord_ancilla1 == coord_ancilla2:
+        #             continue
         #
-        for coord_ancilla1 in ancilla_patch_coordinates_2d:
-            for coord_ancilla2 in ancilla_patch_coordinates_2d:
-
-                # skip routes between the same cell?
-                # maybe this should not be skipped
-                if coord_ancilla1 == coord_ancilla2:
-                    continue
-
-                # if no route was stored by now
-                if self.get_route_between_qubits(coord_ancilla1, coord_ancilla2) is None:
-                    # version two with networkx
-                    back_path = nx.astar_path(grid_graph, coord_ancilla1, coord_ancilla2)
-                    # end version two
-
-                    # store the paths, if something was found
-                    if len(back_path) > 0:
-                        #
-                        # the key is a tuple of coordinates (which are tuples)
-                        #
-                        self.routes[(coord_ancilla1, coord_ancilla2)] = list(back_path)
-                        # store the inverse path, too -- redundant, but simpler to code
-                        self.routes[(coord_ancilla2, coord_ancilla1)] = list(reversed(back_path))
+        #         print("nr routes", len(self.routes))
+        #
+        #         # if no route was stored by now
+        #         if self.get_route_between_qubits(coord_ancilla1, coord_ancilla2) is None:
+        #             # version two with networkx
+        #             back_path = nx.astar_path(grid_graph, coord_ancilla1, coord_ancilla2)
+        #             # end version two
+        #
+        #             # store the paths, if something was found
+        #             if len(back_path) > 0:
+        #                 #
+        #                 # the key is a tuple of coordinates (which are tuples)
+        #                 #
+        #                 self.routes[(coord_ancilla1, coord_ancilla2)] = list(back_path)
+        #                 # store the inverse path, too -- redundant, but simpler to code
+        #                 self.routes[(coord_ancilla2, coord_ancilla1)] = list(reversed(back_path))
 
     def get_route_between_qubits(self, ancilla1, ancilla2):
         '''
@@ -87,9 +95,23 @@ class LayerMap:
         if patch_tuple_a in self.routes:
             return self.routes[patch_tuple_a]
 
-        # patch_tuple_b = (ancilla2, ancilla1)
-        # if patch_tuple_b in self.routes:
-        #     return list(reversed(self.routes[patch_tuple_b]))
+        #
+        # The route is missing
+        # Compute routes between pairs of ancilla coordinates
+        #
+        # version two with networkx
+        back_path = nx.astar_path(self.grid_graph, ancilla1, ancilla2)
+        # end version two
+
+        # store the paths, if something was found
+        if len(back_path) > 0:
+            #
+            # the key is a tuple of coordinates (which are tuples)
+            #
+            self.routes[(ancilla1, ancilla2)] = list(back_path)
+            # store the inverse path, too -- redundant, but simpler to code
+            self.routes[(ancilla2, ancilla1)] = list(reversed(back_path))
+
 
         # there is no path computed between the two patches
         return None
@@ -125,7 +147,7 @@ class LayerMap:
             qubit_name = self.get_circuit_qubit_name(qubit_index)
             self.circuit_qubits_to_patches[qubit_name] = all_data_qubit_coords[qubit_index]
 
-            print("qubit", qubit_name, "@", all_data_qubit_coords[qubit_index])
+            # print("qubit", qubit_name, "@", all_data_qubit_coords[qubit_index])
 
     def get_qubit_coordinate_2d(self, qubit_string_name):
         '''
@@ -304,6 +326,18 @@ class LayerMap:
                 if self.placement_map[qi][qj] == MapCellType.QUBIT:
                     ret.append((qi, qj))
 
+        return ret
+
+    def get_total_number_of_patches(self):
+        """
+        Total number of patches irrespective of their types
+        :return:
+        """
+        ret = 0
+        for qi in range(self.dimension_i):
+            for qj in range(self.dimension_j):
+                if self.placement_map[qi][qj] in [MapCellType.ANCILLA, MapCellType.QUBIT]:
+                    ret += 1
         return ret
 
     def get_potential_ancilla_patches_coordinates_2d(self):

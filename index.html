@@ -25,7 +25,6 @@
     <script>
 
         const HADAMARD_DECORATOR = "H";
-
         const HADAMARD_COLOR = "";
 
         function boxes_collection_has_color(color)
@@ -53,6 +52,9 @@
 
         function process_node_to_mesh(cube)
         {
+            //if(cube.fz == 0)
+            //    return;
+
             if(cube.c == "white")
             {
                 return;

@@ -23,7 +23,7 @@ class CirqInterface:
         # circuits_2 = self.kevin_lih_cirq()
         return circuits_1[0].to_qasm()
 
-    def random_circuit(self, nr_qubits, nr_gates):
+    def random_circuit(self, nr_qubits, nr_gates, ratio_t_gates = 0):
         c = cirq.Circuit()
 
         qubits = []
@@ -32,13 +32,27 @@ class CirqInterface:
 
         # S 0, T 1, H 2, CNOT 3
         for i in range(nr_gates):
-            r_gate_type = random.randint(0, 3)
+
+            # default value
+            r_gate_type = None
+            if ratio_t_gates != 0:
+                # take a random int first to determine if it as a T gate or not
+                is_t_or_not = random.randint(0, 100)
+                if is_t_or_not < ratio_t_gates:
+                    # it is a T gate
+                    r_gate_type = 0
+                else:
+                    # it is anything else
+                    r_gate_type = random.randint(1, 3)
+            else:
+                r_gate_type = random.randint(0, 3)
+
             r_qub = random.randint(0, len(qubits) - 1)
 
             if r_gate_type == 0:
-                c.append(cirq.S(qubits[r_qub]))
-            elif r_gate_type == 1:
                 c.append(cirq.T(qubits[r_qub]))
+            elif r_gate_type == 1:
+                c.append(cirq.S(qubits[r_qub]))
             elif r_gate_type == 2:
                 c.append(cirq.H(qubits[r_qub]))
             elif r_gate_type == 3:
@@ -46,8 +60,6 @@ class CirqInterface:
                 while r_qub2 == r_qub:
                     r_qub2 = random.randint(0, len(qubits) - 1)
                 c.append(cirq.CNOT(control=qubits[r_qub], target=qubits[r_qub2]))
-
-        # print(c.to_qasm())
 
         return c.to_qasm()
 

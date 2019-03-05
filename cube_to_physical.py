@@ -3,8 +3,8 @@
     to number of physical qubits and number of seconds (time unit)
 """
 
-
-def compute_physical_resources(t_count, max_logical_qubits):
+# def compute_physical_resources(t_count, max_logical_qubits):
+def compute_physical_resources(t_count, max_time_coordinate, max_logical_qubits):
     """
         Implementation a la Austin
     """
@@ -54,6 +54,10 @@ def compute_physical_resources(t_count, max_logical_qubits):
         number_of_distillation_levels = 2
     else:
         number_of_distillation_levels = "3+, fail"
+
+    # Due to layout, force, for the moment, levels
+    number_of_distillation_levels = 1
+
     #
     # Number of qubits associated with a single L1 distillation.
     l1_distillation_qubits = 32 * 2 * (l1_distillation_code_distance_d1 ** 2)
@@ -80,6 +84,12 @@ def compute_physical_resources(t_count, max_logical_qubits):
             execution_rounds = 6.5 * 2 * l1_distillation_code_distance_d1 * t_count
     else:
         execution_rounds = "fail"
+
+    # The depth is not dictated by the number of distillations, but by the layout maximum time coordinate
+    # The following if-statement should almost be executed?
+    if execution_rounds < max_time_coordinate:
+        execution_rounds = max_time_coordinate
+
     #
     # Total time required to run the algorithm, assuming this can be totally determined by the number of T gates.
     execution_time_secs = "fail"
@@ -94,7 +104,8 @@ def compute_physical_resources(t_count, max_logical_qubits):
     # Algorithm execution rounds times the number of data qubits and their communication channels.
     total_data_rounds = "fail"
     if number_of_distillation_levels == 1 or number_of_distillation_levels == 2:
-        total_data_rounds = 1.5 * max_logical_qubits * execution_rounds
+        # total_data_rounds = 1.5 * max_logical_qubits * execution_rounds
+        total_data_rounds = max_logical_qubits * execution_rounds
     else:
         total_data_rounds = "fail"
     #
@@ -115,7 +126,8 @@ def compute_physical_resources(t_count, max_logical_qubits):
     num_data_qubits = "fail"
     if number_of_distillation_levels == 1 or number_of_distillation_levels == 2:
         # TODO: And correct height of the entire schedule
-        num_data_qubits = 1.5 * max_logical_qubits * 2 * (data_code_distance ** 2)
+        # num_data_qubits = 1.5 * max_logical_qubits * 2 * (data_code_distance ** 2)
+        num_data_qubits = max_logical_qubits * 2 * (data_code_distance ** 2)
     else:
         num_data_qubits = "fail"
     #
