@@ -116,6 +116,7 @@ class LayerMap:
             # store the inverse path, too -- redundant, but simpler to code
             self.routes[(ancilla2, ancilla1)] = list(reversed(back_path))
 
+            return self.routes[(ancilla1, ancilla2)]
 
         # there is no path computed between the two patches
         return None

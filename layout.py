@@ -109,6 +109,7 @@ class CubeLayout:
         '''
         for si in range(self.get_isize()):
             for sj in range(self.get_jsize()):
+                raise Exception("Memory should have a fixed size")
                 self.add_NOOP(si, sj)
 
         return self.get_tsize()

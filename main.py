@@ -72,8 +72,8 @@ def benchmark_layout_method():
     # random_configs["gates"]   = [100,     100,    1000,   1000,   3000]
     # random_configs["t_ratio"] = [50,      50,     50,     50,     50]
 
-    random_configs["qubits"] = [500]
-    random_configs["gates"] = [2000]
+    random_configs["qubits"] = [10]
+    random_configs["gates"] = [100]
     random_configs["t_ratio"] = [50]
 
     print("Random Circuits Benchmark")
@@ -159,9 +159,8 @@ def process_string_of_circuit(qasm_cirq_circuit):
     height_of_distillation = int(layer_map.distillation_t_length * 1)
 
     # worst case: each command is a distillation
-    # nr_commands = (len(commands) / 2) * height_of_distillation
-
-    nr_commands = len(commands)
+    nr_commands = len(commands) * height_of_distillation
+    # nr_commands = len(commands)
 
     # # there is a MAX the current version can handle
     # if nr_commands >= 10000:
@@ -175,7 +174,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # limit the maximum commands to nr_commands, because otherwise memory explodes
     for command in commands[0:nr_commands]:
-        # print(command)
+        print(command)
 
         # each command should add a new time step?
         command_splits = command.split(" ")
