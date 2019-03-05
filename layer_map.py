@@ -95,6 +95,10 @@ class LayerMap:
         if patch_tuple_a in self.routes:
             return self.routes[patch_tuple_a]
 
+        patch_tuple_b = (ancilla2, ancilla1)
+        if patch_tuple_b in self.routes:
+            return self.routes[patch_tuple_b]
+
         #
         # The route is missing
         # Compute routes between pairs of ancilla coordinates
