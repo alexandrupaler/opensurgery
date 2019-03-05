@@ -10,6 +10,8 @@ import operationcollection as opc
 
 import cirqinterface as ci
 
+import time
+
 
 def write_json(object_to_store):
     with open('layout.json', 'w') as outfile:
@@ -85,7 +87,12 @@ def benchmark_layout_method():
 
     for circuit in benchmark_circuits:
         print(".....")
+        start = time.time()
+
         process_string_of_circuit(circuit)
+
+        end = time.time()
+        print("Time", end - start)
 
 def main():
 
@@ -174,7 +181,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # limit the maximum commands to nr_commands, because otherwise memory explodes
     for command in commands[0:nr_commands]:
-        print(command)
+        # print(command)
 
         # each command should add a new time step?
         command_splits = command.split(" ")
