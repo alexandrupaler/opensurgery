@@ -11,6 +11,7 @@ import operationcollection as opc
 import cirqinterface as ci
 
 import time
+import sys
 
 
 def write_json(object_to_store):
@@ -93,6 +94,7 @@ def benchmark_layout_method():
 
         end = time.time()
         print("Time", end - start)
+        sys.stdout.flush()
 
 def main():
 
@@ -103,9 +105,9 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
-    benchmark_layout_method()
-    #
-    return
+    # benchmark_layout_method()
+    # #
+    # return
 
     print("OpenSurgery (version Santa Barbara)\n")
 
@@ -142,7 +144,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # commands = prep.load_multibody_format()
 
     # tests begin
-    # commands = ['INIT 10', 'NEED A', 'MXX A 3', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
+    commands = ['INIT 10', 'NEED A', 'MXX A 3', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
     # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
     # tests end
