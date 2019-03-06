@@ -178,9 +178,13 @@ class LayerMap:
         '''
 
         # total patches
-        nr_data_patches_per_line = self.distillation_j_length - 2 # two because of ancilla
+        nr_data_patches_per_line = self.distillation_j_length - 2# two because of ancilla
         nr_data_lines = math.ceil(nr_logical_qubits / nr_data_patches_per_line)
-        nr_non_distillation_lines = 2 * nr_data_lines
+        nr_non_distillation_lines = math.ceil(1.5 * nr_data_lines)
+
+        if nr_non_distillation_lines % 3 == 0:
+            # Due to the arrangement the last line of qubits will not be able to exit
+            nr_non_distillation_lines += 1
 
         # the arrangement has the width of a distillation
         self.dimension_j = self.distillation_j_length
@@ -193,20 +197,31 @@ class LayerMap:
                 self.placement_map[i].append(MapCellType.ANCILLA)
 
         #
+        # Place distillation cells
+        #
+        for i in range(self.distillation_i_length):
+            for j in range(self.distillation_j_length):
+                self.placement_map[i][j] = MapCellType.DISTILLATION
+
+        #
         #   Place the qubit and ancilla patches on the map
         #
-        for i in range(self.dimension_i):
+        # to start with ancilla
+        line = 0
+        for i in range(self.distillation_i_length, self.dimension_i):
             # default cell type on a row is qubit
             map_type = MapCellType.QUBIT
             # on each middle row from three, the type is ancilla
-            if (i % 3) == 1:
+            if (line % 3) == 0:
                 map_type = MapCellType.ANCILLA
             # set the row cell types
             for j in range(self.dimension_j):
                 self.placement_map[i][j] = map_type
 
+            line += 1
+
         # in the middle of each row two ancilla patches are placed one next to the other
-        for i in range(self.dimension_i):
+        for i in range(self.distillation_i_length, self.dimension_i):
             self.placement_map[i][self.dimension_j // 2] = MapCellType.ANCILLA
             self.placement_map[i][self.dimension_j // 2 - 1] = MapCellType.ANCILLA
 
@@ -216,13 +231,6 @@ class LayerMap:
         # self.circuit_qubits_to_patches['ANCILLA'] = (4, self.dimension_j // 2 - 1)
         # On the last line in the middle channel
         self.circuit_qubits_to_patches['ANCILLA'] = (self.dimension_i - 1, self.dimension_j // 2 - 1)
-
-        #
-        # Place distillation cells
-        #
-        for i in range(self.distillation_i_length):
-            for j in range(self.distillation_j_length):
-                self.placement_map[i][j] = MapCellType.DISTILLATION
 
         #
         # Map the logical qubits to data patches

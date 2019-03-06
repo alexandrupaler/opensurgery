@@ -71,13 +71,13 @@ def load_random_circuits(random_configs):
 def benchmark_layout_method():
 
     random_configs = {}
-    # random_configs["qubits"]  = [10,      20,     100,    200,    500]
-    # random_configs["gates"]   = [100,     100,    1000,   1000,   3000]
-    # random_configs["t_ratio"] = [50,      50,     50,     50,     50]
-
-    random_configs["qubits"] = [10]
-    random_configs["gates"] = [100]
-    random_configs["t_ratio"] = [50]
+    random_configs["qubits"]  = [10,      20,     100,    200,    500]
+    random_configs["gates"]   = [100,     100,    1000,   1000,   3000]
+    random_configs["t_ratio"] = [50,      50,     50,     50,     50]
+    #
+    # random_configs["qubits"] = [100]
+    # random_configs["gates"] = [10]
+    # random_configs["t_ratio"] = [50]
 
     print("Random Circuits Benchmark")
     # use if new random benchmarks should be generated
@@ -105,9 +105,9 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
-    # benchmark_layout_method()
-    # #
-    # return
+    benchmark_layout_method()
+    #
+    return
 
     print("OpenSurgery (version Santa Barbara)\n")
 
@@ -144,7 +144,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # commands = prep.load_multibody_format()
 
     # tests begin
-    commands = ['INIT 10', 'NEED A', 'MXX A 3', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
+    # commands = ['INIT 10', 'NEED A', 'MXX A 7', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
     # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
     # tests end
@@ -183,7 +183,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # limit the maximum commands to nr_commands, because otherwise memory explodes
     for command in commands[0:nr_commands]:
-        # print(command)
+        print(command)
 
         # each command should add a new time step?
         command_splits = command.split(" ")
