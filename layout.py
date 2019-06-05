@@ -515,7 +515,6 @@ class CubeLayout:
         #
         # Move back
         #
-
         if qub_string != 'ANCILLA' and (qub2_name in active_patches):
             #
             # create data movement to ancilla

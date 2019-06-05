@@ -28,6 +28,35 @@ class VisualiseLayout:
         elif op_type == opc.OperationTypes.MZ_QUBIT:
             return "cyan"
 
+    def remove_if_in_distillery_core(self, layout, i, j, t):
+        # use this cube only if at least one neighbouring coordinate is not of the same type
+        # effectively removes core of large boxes... eases the viualisation
+        same_type_nghs = 0
+
+        for mi in range(-1, 2):
+            for mj in range(-1, 2):
+                for mt in range(-1, 2):
+                    if (mi != 0) and (mj != 0) and (mt != 0):
+                        ni = i + mi
+                        nj = j + mj
+                        nt = t + mt
+
+                        valid_coord = ni in range(layout.get_isize())
+                        valid_coord = valid_coord and (nj in range(layout.get_jsize()))
+                        valid_coord = valid_coord and (nt in range(layout.get_tsize()))
+
+                        if valid_coord and (layout.coordinates[ni][nj][nt] is not None):
+                            n_op_id = layout.coordinates[ni][nj][nt].operations[0]
+                            n_op_type = layout.operations_dictionary[n_op_id].op_type
+
+                            if n_op_type == opc.OperationTypes.USE_DISTILLATION:
+                                same_type_nghs += 1
+
+        # print(same_type_nghs)
+        return (same_type_nghs == 8)
+
+
+
     def visualise_cube(self, layout, remove_noop):
         json2 = {"nodes": [], "links": []}
 
@@ -50,6 +79,11 @@ class VisualiseLayout:
 
                     for op_id in ops_collection.operations:
                         op_type = layout.operations_dictionary[op_id].op_type
+
+                        if op_type == opc.OperationTypes.USE_DISTILLATION:
+                            if self.remove_if_in_distillery_core(layout, i, j, t):
+                                # this cell should not be considered
+                                break
 
                         cell_id = layout.get_cell_id(i, j, t)
                         color = self.get_color(op_type)

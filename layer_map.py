@@ -8,7 +8,7 @@ class MapCellType(Enum):
     DISTILLATION = 7
 
 class LayerMap:
-    def __init__(self):
+    def __init__(self, distillation_box_dimensions):
         # two-dimensional array storing the type of the cells using MapCellType
         self.placement_map = []
 
@@ -16,12 +16,9 @@ class LayerMap:
         self.dimension_i = -1
         self.dimension_j = -1
 
-        # hard coded dimensions of single layer distillation
-        # assuming two levels of distillation are necessary
-        # using the dimensions from https://arxiv.org/pdf/1808.06709.pdf
-        self.distillation_i_length = 4
-        self.distillation_j_length = 8
-        self.distillation_t_length = 8
+        self.distillation_i_length = distillation_box_dimensions["x"]
+        self.distillation_j_length = distillation_box_dimensions["y"]
+        self.distillation_t_length = distillation_box_dimensions["t"]
 
         # ancilla coordinate will be changed when the placement_one method is called
         self.circuit_qubits_to_patches = {'A': (3, 0), 'ANCILLA': (4, 0)}
@@ -104,7 +101,9 @@ class LayerMap:
         # Compute routes between pairs of ancilla coordinates
         #
         # version two with networkx
+        print("a12", ancilla1, ancilla2)
         back_path = nx.astar_path(self.grid_graph, ancilla1, ancilla2)
+
         # end version two
 
         # store the paths, if something was found
@@ -233,6 +232,11 @@ class LayerMap:
         self.circuit_qubits_to_patches['ANCILLA'] = (self.dimension_i - 1, self.dimension_j // 2 - 1)
 
         #
+        # The A output is in the corner of the distillation
+        #
+        self.circuit_qubits_to_patches['A'] = (self.distillation_i_length - 1, 0)
+
+        #
         # Map the logical qubits to data patches
         #
         logical_qubit_indices = list(range(nr_logical_qubits))
@@ -260,7 +264,11 @@ class LayerMap:
         ancillas = []
 
         if (qub_i, qub_j) == self.circuit_qubits_to_patches["A"]:
-            ancillas.append((3, 1))
+            # append here the correct coordinate
+            coord_a_state = self.circuit_qubits_to_patches["A"]
+            ancillas.append((coord_a_state[0], coord_a_state[1] + 1))
+            # more beauty...
+            return ancillas
 
         directions = []
         if search_directions is None:

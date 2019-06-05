@@ -570,7 +570,7 @@ SurgeryWebGLVisualiser.prototype.pre_init = function () {
 
     // Camera
     this.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 1000000);
-    this.camera.position.set(0, 0, 10);
+    this.camera.position.set(0, 0, 100);
     this.camera.up = new THREE.Vector3(-1, 0, 0);
 
     this.scene.add(this.camera);

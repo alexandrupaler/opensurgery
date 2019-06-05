@@ -96,6 +96,7 @@ def benchmark_layout_method():
         print("Time", end - start)
         sys.stdout.flush()
 
+
 def main():
 
     ''''
@@ -105,9 +106,9 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
-    benchmark_layout_method()
-    #
-    return
+    # benchmark_layout_method()
+    # #
+    # return
 
     print("OpenSurgery (version Santa Barbara)\n")
 
@@ -144,10 +145,27 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # commands = prep.load_multibody_format()
 
     # tests begin
-    # commands = ['INIT 10', 'NEED A', 'MXX A 7', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
-    # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
+    # commands = ['INIT 2', 'NEED A']# 'MXX A 7', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
+    commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
     # tests end
+
+    if not commands[0].startswith("INIT"):
+        # first line should always be INIT
+        print("ERROR: No INIT command for the layer map")
+        return
+
+    """
+        Predict the resources
+    """
+    # data patches + ancilla patches + distillation patches
+    # Assume number of patches equals qubits
+    max_log_qubits = int(commands[0].split(" ")[1])
+    t_count = commands.count("NEED A")
+    # estimate the resources
+    qentiana = qre.Qentiana(t_count, max_log_qubits)
+    res_values = qentiana.compute_physical_resources()
+    print("Resource prediction phys. qubits, time, t_count, time, log_qub: ", res_values)
 
     #
     # The STORAGE of QUBIT STATES
@@ -157,7 +175,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
     #
     # The LAYER MAP
     #
-    layer_map = lll.LayerMap()
+    layer_map = lll.LayerMap(qentiana.compute_dist_box_in_patch_units())
 
     #
     # The LAYOUT, will be initialised after an INIT command
@@ -169,20 +187,10 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # worst case: each command is a distillation
     nr_commands = len(commands) * height_of_distillation
-    # nr_commands = len(commands)
 
-    # # there is a MAX the current version can handle
-    # if nr_commands >= 10000:
-    #     print("MAX Commands was limited to 10000")
-    #     nr_commands = 10000
-
-    if not commands[0].startswith("INIT"):
-        # first line should always be INIT
-        print("ERROR: No INIT command for the layer map")
-        return
 
     # limit the maximum commands to nr_commands, because otherwise memory explodes
-    for command in commands[0:nr_commands]:
+    for command in commands[0: nr_commands]:
         print(command)
 
         # each command should add a new time step?
@@ -214,8 +222,8 @@ def process_string_of_circuit(qasm_cirq_circuit):
             # - all the following gates are delayed until the distillation has finished
 
             # Get the 2D coordinates of the active patches
-            filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=[])
-            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
+            # filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=[])
+            # lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
 
             # the distilled A state is available
             patches_state.add_active_patch("A")
@@ -243,7 +251,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
             lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
 
         elif (command_splits[0] == "S") or (command_splits[0] == "V"):
-            # I will tread S and V the same
+            # I will treat S and V the same
             # for the moment not mark them with different colours
 
             # we need four patches in this method
@@ -323,22 +331,6 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # Visual Debug the paths computed between ancilla patches
     # lay.debug_all_paths()
-
-    """
-        Estimate the resources
-    """
-    # data patches + ancilla patches + distillation patches
-    max_log_qubits = layer_map.get_total_number_of_patches()
-
-    # TODO: This is not really correct, because I need to send as parameter the depth of the geometry
-    # TODO: Correct this parameter to get the depth of the geometry
-    t_count = commands.count("NEED A")
-
-    max_time_depth = lay.current_time_coordinate
-
-    # estimate the resources
-    res_values = qre.compute_physical_resources(t_count, max_time_depth, max_log_qubits)
-    print("Resource estimation phys. qubits, time, t_count, time, log_qub: ", res_values, t_count, max_time_depth, max_log_qubits)
 
     return lay
 
