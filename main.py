@@ -1,17 +1,17 @@
-import os
 import json
 import prepare_circuit as pc
 import layout as la
 import visualise_layout as vla
 import layer_map as lll
 import patches_state as ps
-import cube_to_physical as qre
 import operationcollection as opc
 
 import cirqinterface as ci
 
 import time
 import sys
+
+from resanalysis import cube_to_physical as qre
 
 
 def write_json(object_to_store):
@@ -165,7 +165,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # estimate the resources
     qentiana = qre.Qentiana(t_count, max_log_qubits)
     res_values = qentiana.compute_physical_resources()
-    print("Resource prediction phys. qubits, time, t_count, time, log_qub: ", res_values)
+    print("Resource prediction (levels, phys. qubits, time): ", res_values)
 
     #
     # The STORAGE of QUBIT STATES
