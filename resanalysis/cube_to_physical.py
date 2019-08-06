@@ -1,28 +1,29 @@
 """
     Add some kind of computation to translate the total volume of a circuit
     to number of physical qubits and number of seconds (time unit)
-"""
-"""
-    Implementation a la Austin
+
+    ---> Implementation a la Austin
 """
 
 import math
 
 class Qentiana:
-    def __init__(self, t_count, max_logical_qubits):
+    def __init__(self, t_count, max_logical_qubits, max_time_units = 0, gate_err_rate = 0.001):
         """
-        Constructor. Considers that T-count == T-depth
+        Constructor. Considers that T-count == T-depth if max_time_units is zero
+
         :param t_count:
         :param max_logical_qubits:
+        :param max_time_units:
+        :param gate_err_rate:
         """
-
         """
             Parameters
         """
         self.parameters = {
                             # Gate error rate that sets how quickly logical errors are suppressed.
                             # 1e-3 means a factor of 10 suppression with each increase of d by 2.
-                            "characteristic_gate_error_rate" : 0.001,
+                            "characteristic_gate_error_rate" : gate_err_rate,#0.001,
                             # Time required to execute a single round of the surface code circuit detecting errors.
                             "total_surface_code_cycle_time_ns": 1000,
                             # Safety factor S means that whenever we wish to do N things reliably,
@@ -50,7 +51,19 @@ class Qentiana:
                                     "distance"      : -1}
 
         self.t_count = t_count
+        if self.t_count == 0:
+            if max_time_units != 0:
+                """
+                If the T-count was not specified, but the depth of the circuit was
+                then an approximation is to consider that the depth is T-count
+                """
+                self.t_count = math.ceil(max_time_units / self.dist_box_dimensions["t"])
+            else:
+                print("PROBLEM!!! Both t_count and max_time_units are zero! Results will be wrong!")
+
+
         self.max_logical_qubits = max_logical_qubits
+        self.max_time_units = max_time_units
 
         # A scale is the ratio between data patch qubit distance and the distillation distance
         # It effectively says how many logical qubit patches of distance d
@@ -182,9 +195,7 @@ class Qentiana:
 
     def compute_data_code_distance(self):
         """
-            Compute data code distance. Consider the maximum number of units on the time axis
-        :param t_count:
-        :param max_logical_qubits:
+        Compute data code distance. Consider the maximum number of units on the time axis
         :return:
         """
         """
@@ -193,20 +204,25 @@ class Qentiana:
         Each distillation has known number of units in time
         The distance has been computed in compute_distillation_scale_factor
         """
-        execution_rounds = self.compute_number_of_rounds(elements=self.t_count,
-                                                         element_distance=self.dist_box_dimensions["distance"],
-                                                         element_units_in_time=self.dist_box_dimensions["t"])
+        execution_rounds = self.compute_execution_rounds()
+
 
         """
         Assume that the logical qubit patches are executed in a sequence
         Each logical qubit is ONE unit long
         And each unit has a distance of execution_rounds (from the distillations)
         """
-        total_data_rounds = self.compute_number_of_rounds(elements=self.max_logical_qubits,
-                                                          element_distance=execution_rounds,
-                                                          element_units_in_time=1)
+        total_data_rounds = self.compute_number_of_rounds(elements = self.max_logical_qubits,
+                                                          element_distance = execution_rounds,
+                                                          element_units_in_time = 1)
 
-        total_data_rounds *= self.parameters["multiplication_factor_for_Clifford_domination"]
+        if self.max_time_units == 0:
+            """
+            The total execution time is not known, thus T-count is worst-case
+            If the T-count is the worst case (and max_time_units was not specified)
+            then the multiplication factor is used to determine the max_time_units
+            """
+            total_data_rounds *= self.parameters["multiplication_factor_for_Clifford_domination"]
 
         target_error_per_data_round = 1 / (self.parameters["safety_factor"] * total_data_rounds)
 
@@ -222,9 +238,9 @@ class Qentiana:
         footprint_units =  self.dist_box_dimensions["x"] *  self.dist_box_dimensions["y"]
         #
         # Number of qubits associated with a single L1 distillation.
-        l1_dist_qubits = footprint_units * self.per_patch_qubits(self.parameters["l1_distillation_code_distance_d1"])
+        l1_dist_qubits = footprint_units * self.phys_qubits_per_patch(self.parameters["l1_distillation_code_distance_d1"])
         # Number of qubits associated with a single L2 distillation.
-        l2_dist_qubits = footprint_units * self.per_patch_qubits(self.parameters["l2_distillation_code_distance_d2"])
+        l2_dist_qubits = footprint_units * self.phys_qubits_per_patch(self.parameters["l2_distillation_code_distance_d2"])
         #
         # Note that if 2 levels of distillation are required, that will be a single L2 + 8 L1 footprints.
         # See diagram above
@@ -238,45 +254,104 @@ class Qentiana:
 
         return total_dist_qubits
 
-    # def compute_physical_resources(t_count, max_logical_qubits):
-    def compute_physical_resources(self, max_time_units = 0):
+    def compute_footprint_data_qubits(self):
+        # Total number of data qubits, including communication channels.
+        # Have unit dimensions -> (1*1)
+        # before extraction in method it was the code below
+        # self.max_logical_qubits * (1*1) * Qentiana.phys_qubits_per_patch(self.parameters["data_code_distance"])
 
+        num_data_qubits = Qentiana.phys_qubits_for_all_log_qubits(self.max_logical_qubits, self.parameters["data_code_distance"])
+        return num_data_qubits
+
+
+    def compute_physical_resources(self):
         """
             Compute the number of physical qubits
         """
-        # Total number of data qubits, including communication channels.
-        # Have unit dimensions -> (1*1)
-        num_data_qubits = self.max_logical_qubits * (1*1) * self.per_patch_qubits(self.parameters["data_code_distance"])
+        num_data_qubits = self.compute_footprint_data_qubits()
         #
         # Total physical qubits required to run algorithm.
         total_qubits = self.compute_footprint_distillation_qubits() + num_data_qubits
         #
-        """
-            Compute the execution time
-            Assume T-depth is the worst case
-        """
-        execution_rounds = self.compute_number_of_rounds(elements = self.t_count,
-                                                         element_distance = self.dist_box_dimensions["distance"],
-                                                         element_units_in_time = self.dist_box_dimensions["t"])
-        if max_time_units != 0:
-            execution_rounds = self.compute_number_of_rounds(elements = max_time_units,
-                                                             element_distance = self.parameters["data_code_distance"],
-                                                             element_units_in_time = 1)
-
-
+        execution_rounds = self.compute_execution_rounds()
+        #
         execution_time_secs = execution_rounds * self.parameters["total_surface_code_cycle_time_ns"] * 0.000000001
 
-        return total_qubits, execution_time_secs
+        results = {
+                "levels"                        : self.number_of_distillation_levels,
+                "number_of_physical_qubits"     : total_qubits,
+                "time"                          : execution_time_secs,
+                "distance"                      : self.parameters["data_code_distance"]
+        }
 
+        return results
+
+    def compute_execution_rounds(self):
+        """
+            Compute the execution time
+            If max_time_units was not specified, then assume T-depth is the worst case
+        """
+        execution_rounds = self.compute_number_of_rounds(elements=self.t_count,
+                                                         element_distance=self.dist_box_dimensions["distance"],
+                                                         element_units_in_time=self.dist_box_dimensions["t"])
+        if self.max_time_units != 0:
+            # Here there is no worst-case, but a computation based on the specified parameter
+            execution_rounds = self.compute_number_of_rounds(elements=self.max_time_units,
+                                                             element_distance=self.parameters["data_code_distance"],
+                                                             element_units_in_time=1)
+        return execution_rounds
 
     """
         Counting utilities
     """
+    @staticmethod
+    def phys_qubits_for_all_log_qubits(nr_logic_qubits, distance):
+        # A previous version in Javascript counted also the qubits on the boundaries
+        # #first two because there are data and measurement qubits
+        # var tmp = space * (2 * distance * distance - 1);
+        # #add qubits on two boundaries(e.g.bottom, right)
+        # return tmp + 2 * space * (distance * 2 + 1);
+        return nr_logic_qubits * Qentiana.phys_qubits_per_patch(distance)
 
-    def per_patch_qubits(self, distance):
+
+    @staticmethod
+    def phys_qubits_per_patch(distance):
+        """
+        How many data and syndrome qubits are necessary per patch for a given distance?
+        :param distance:
+        :return:
+        """
         return 2 * (distance ** 2)
 
-    def compute_number_of_rounds(self, elements, element_distance, element_units_in_time):
+    @staticmethod
+    def distance_from_patch_phys_qubits(phys_qubits):
+        """
+        The inverse operation of phys_qubits_per_patch. Assume square patch.
+        :param phys_qubits: total data and syndrome qubits for the patch
+        :return: estimated distance available on a square patch
+        """
+        return math.floor(math.sqrt(phys_qubits/2))
+
+    @staticmethod
+    def max_distance_to_fit_log_qubits_on_phys_qubits(logical_qubits, total_physical_qubits):
+        # Calculates the maximum distance given a fixed number of physical qubits
+        # Assuming that a square number of physical qubits is necessary to encode a logical qubit
+
+        if logical_qubits > total_physical_qubits:
+            # Error: there are more logical qubits than physical
+            return -1
+
+        max_phys_qubits_per_logical = total_physical_qubits / logical_qubits
+
+        ret = Qentiana.distance_from_patch_phys_qubits(max_phys_qubits_per_logical)
+
+        if ret <= 2:
+            return 1
+
+        return ret
+
+    @staticmethod
+    def compute_number_of_rounds(elements, element_distance, element_units_in_time):
         """
         Computes for a number of sequentially executed elements, the number of error correction rounds.
         :param elements: number of elements (e.g. distillation procedures)
@@ -291,7 +366,8 @@ class Qentiana:
     Do While translated to simple while, because condition was after DO
     """
 
-    def vba_levels(self, p_in, p_out):
+    @staticmethod
+    def vba_levels(p_in, p_out):
         n = 0
         while p_in > p_out:
             n = n + 1
@@ -299,20 +375,20 @@ class Qentiana:
         # levels = n
         return n
 
-
-    def vba_p_logical(self, p_gate, d):
+    @staticmethod
+    def vba_p_logical(p_gate, d):
         return 0.1 * (100 * p_gate) ** ((d + 1) / 2)
 
-
-    def vba_distance(self, p_gate, p_l):
+    @staticmethod
+    def vba_distance(p_gate, p_l):
         d = 3
-        while self.vba_p_logical(p_gate, d) > p_l:
+        while Qentiana.vba_p_logical(p_gate, d) > p_l:
             d = d + 2
         # distance = d
         return d
 
-
-    def vba_distillation_p_out(self, p_in, xxx_levels):
+    @staticmethod
+    def vba_distillation_p_out(p_in, xxx_levels):
         n = 0
         while n < xxx_levels:
             n = n + 1
