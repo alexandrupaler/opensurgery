@@ -89,3 +89,4 @@ def to_rgb(param):
 def from_rgb(param):
     # why is 2 here?
     return 2 if (param == 255) else (param / 255.0)
+

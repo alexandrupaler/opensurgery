@@ -115,3 +115,5 @@ class TimeVsSpace:
                + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"])\
                + "qub vol: {}<br>".format(data["nr_target_vol"])\
                + "qub spc: {}<br>".format(data["nr_target_space"])
+
+

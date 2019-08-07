@@ -102,3 +102,4 @@ class PhysicalQubitsVsLogicalError:
         return "Distance at point ({}, {}): {} <br>".format(data["x"], data["y"], data["dist"]) \
             + "error rate in unit cell: {} with a total volume of {} <br>".format(data["indiv_error"], data["total_volume"]) \
             + "Total success probability: {} <br>".format(data["total_error"])
+
