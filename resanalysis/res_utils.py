@@ -41,7 +41,7 @@ import math
 # TODO: replace with numpy calls
 def local_logspace(start, stop, num = 50):
     # Assume base = 10
-    ret = [] * (num + 1)
+    ret = [0] * num
     delta = (stop - start) / num
 
     for i in range(num):
@@ -52,7 +52,7 @@ def local_logspace(start, stop, num = 50):
 
 #TODO: replace with numpy calls
 def local_linspace(start, stop, num = 50):
-    ret = [] * num
+    ret = [0] * num
     delta = (stop - start) / num
 
     for i in range(num):
@@ -67,7 +67,7 @@ def local_linspace_2(middle, plus_minus_range, num = 50):
         #make odd
         num += 1
 
-    ret = [] * num
+    ret = [0] * num
     middle_index = math.floor(num / 2)
     ret[middle_index] = middle
 

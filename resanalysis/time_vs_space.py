@@ -1,10 +1,10 @@
 import math
 
-from . import res_utils as resu
-from . import cube_to_physical as qre
+from resanalysis import res_utils as resu
+from resanalysis import cube_to_physical as qre
 
 class TimeVsSpace:
-    def __init__(self, t_count, max_logical_qubits):
+    def __init__(self):
         #
         self.nr_items = 100
         # log spaced volume scaling factor
@@ -19,14 +19,16 @@ class TimeVsSpace:
 
 
     def get_default_parameters(self):
-            #
-            self.parameters = {}
+        parameters = {}
+        parameters["bool_update_plot"] = False
+
+        return parameters
 
 
-    def gen_data(self, experiment):
-        volume_min = experiment.volume
-        space_min = experiment.footprint
-        p_err = experiment.physical_error_rate
+    def gen_data(self, experiment, parameters = None):
+        volume_min = experiment["volume"]
+        space_min = experiment["footprint"]
+        p_err = experiment["physical_error_rate"]
 
         data = []
 
@@ -86,8 +88,8 @@ class TimeVsSpace:
         component_red       = data["ratio"]
         component_blue      = data["ratio"]
 
+        # TODO: repair below instead of hardcoded
         # analysis = resu.analysis(data)
-
         analysis = {"ok": True}
 
         if analysis["ok"]:
@@ -95,25 +97,21 @@ class TimeVsSpace:
         else:
             component_red = 255
 
-        return "rgb(" + str(resu.to_rgb(component_red))\
-              + "," + str(resu.to_rgb(component_green)) \
-              + "," + resu.to_rgb(component_blue) + ")"
+        red = resu.to_rgb(component_red)
+        green = resu.to_rgb(component_green)
+        blue = resu.to_rgb(component_blue)
+
+        return "rgb({}, {}, {})".format(red, green, blue)
 
 
-# def compute_over_content(self, data):
-    #     curr_volume = resu.approx_mult_factor(data.y, experiment.volume)
-    #     curr_space = resu.approx_mult_factor(data.x, experiment.footprint)
-    #
-    #     content = ""
-    #     content += data.x + " " + data.y + "->" + data.ratio + "<br>"
-    #     content += "distance vol: " + data.dist_opt_vol + " having a hardware footprint of " + curr_space + " log qubits <br>"
-    #     content += "distance space: " + data.dist_opt_space + " for a volume of " + curr_volume + "<br>"
-    #
-    #     content += "tradeoff time scaling threshold<br>" + (data.x * data.y) + "<br>"
-    #     content += "minimum scaling should be below tradeoff threshold:<br>" + data.dist_opt_space + "<br>"
-    #
-    #     content += "<br>";
-    #     content += "qub vol: " + data["nr_target_vol"] + "<br>"
-    #     content += "qub spc: " + data["nr_target_space"] + "<br>"
-    #
-    #     return content
+    def explain_data(self, data, experiment):
+        curr_volume = math.ceil(data["y"] * experiment["volume"])
+        curr_space = math.ceil(data["x"] * experiment["footprint"])
+
+        return "{} {} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
+               + "dist vol: {} having a footprint of log qubits<br>".format(data["dist_opt_vol"], curr_space) \
+               + "dist space: {} for a volume of {}<br>".format(data["dist_opt_space"], curr_volume) \
+               + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"])\
+               + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"])\
+               + "qub vol: {}<br>".format(data["nr_target_vol"])\
+               + "qub spc: {}<br>".format(data["nr_target_space"])

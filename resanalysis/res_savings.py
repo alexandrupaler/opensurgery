@@ -1,10 +1,10 @@
 import math
 
-from . import res_utils as resu
-from . import cube_to_physical as qre
+from resanalysis import res_utils as resu
+from resanalysis import cube_to_physical as qre
 
 class ResourceSavings:
-    def __init__(self, t_count, max_logical_qubits):
+    def __init__(self):
         #
         self.nr_items = 100
         # log spaced volume scaling factor
@@ -18,16 +18,19 @@ class ResourceSavings:
 
     def get_default_parameters(self):
         #
-        self.parameters = {}
+        parameters = {}
+        parameters["bool_update_plot"] = False
+
+        return parameters
 
 
-    def gen_data(self, experiment):
+    def gen_data(self, experiment, parameters = None):
         # // 2D Array
         # // take the globale experiment for the moment
 
-        start_volume = experiment.volume
-        start_space = experiment.footprint
-        p_err = experiment.physical_error_rate
+        start_volume = experiment["volume"]
+        start_space = experiment["footprint"]
+        p_err = experiment["physical_error_rate"]
 
         data = []
 
@@ -88,27 +91,17 @@ class ResourceSavings:
         return data
 
     def color_interpretation(d):
-        return "rgb(" + str(resu.to_rgb(d["ratio"])) + \
-               "," + str(resu.to_rgb(d["ratio"])) + \
-               "," + str(resu.to_rgb(d["ratio"])) + \
-               ")"
+        rgb = resu.to_rgb(d["ratio"])
+        return "rgb({},{},{})".format(rgb, rgb, rgb)
 
-    # MaigloeckchenData.prototype.compute_over_content = function(data)
-    # {
-    #     var curr_volume = approx_mult_factor(data.y, experiment.volume);
-    #     var curr_space = approx_mult_factor(data.x, experiment.footprint);
-    #
-    #     content = "";
-    #     content += data.x + " " + data.y + "->" + data.ratio + "<br>";
-    #     content += "distance vol: " + data.dist_opt_vol + " having a hardware footprint of " + curr_space + " log qubits <br>";
-    #     content += "distance space: " + data.dist_opt_space + " for a volume of " + curr_volume + "<br>";
-    #
-    #     content += "tradeoff time scaling threshold<br>" + (data.x * data.y) + "<br>";
-    #     content += "minimum scaling should be below tradeoff threshold:<br>" + data.dist_opt_space + "<br>";
-    #
-    #     content += "<br>";
-    #     content += "qub vol: " + data.nr_target_vol + "<br>";
-    #     content += "qub spc: " + data.nr_target_space + "<br>";
-    #
-    #     return content;
-    # }
+    def explain_data(self, data, experiment):
+        curr_volume = math.ceil(data["y"] * experiment["volume"])
+        curr_space = math.ceil(data["x"] * experiment["footprint"])
+
+        return "{} {} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
+               + "dist vol: {} having a footprint of log qubits<br>".format(data["dist_opt_vol"], curr_space) \
+               + "dist space: {} for a volume of {}<br>".format(data["dist_opt_space"], curr_volume) \
+               + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"]) \
+               + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"]) \
+               + "qub vol: {}<br>".format(data["nr_target_vol"]) \
+               + "qub spc: {}<br>".format(data["nr_target_space"])

@@ -1,7 +1,7 @@
 import math
 
-from . import res_utils as resu
-from . import cube_to_physical as qre
+from resanalysis import res_utils as resu
+from resanalysis import cube_to_physical as qre
 
 class PhysicalQubitsVsLogicalError:
     def __init__(self):
@@ -33,18 +33,18 @@ class PhysicalQubitsVsLogicalError:
         return math.pow(1 - per_unit_err, nr_units)
 
 
-    def gen_data(self, experiment):
+    def gen_data(self, experiment, parameters = None):
         """
 
         :param experiment:
         :return:
         """
-        nr_log_qubits = experiment.footprint
-        volume = experiment.volume
-        p_err = experiment.physical_error_rate
+        nr_log_qubits = experiment["footprint"]
+        volume = experiment["volume"]
+        p_err = experiment["physical_error_rate"]
 
         # parameters are collected by the plot var
-        total_num_physical_qubits = self.parameters["total_num_physical_qubits"]
+        total_num_physical_qubits = parameters["total_num_physical_qubits"]
 
         data = []
 
@@ -95,18 +95,10 @@ class PhysicalQubitsVsLogicalError:
 
 
     def color_interpretation(d):
-        return "rgb(" + str(resu.to_rgb(d["total_error"])) \
-               + "," + str(resu.to_rgb(d["total_error"])) \
-               + "," + str(resu.to_rgb(d["total_error"])) \
-               + ")"
+        rgb = resu.to_rgb(d["total_error"])
+        return "rgb({},{},{})".format(rgb)
 
-# LoewenzahnData.prototype.compute_over_content = function(data)
-# {
-# var
-# content = "";
-# content += "Distance at point (" + data.x + ", " + data.y + "): <br>" + data.dist + " <br>";
-# content += "error rate in unit cell: " + data.indiv_error + " with a total volume of " + data.total_volume + "<br>";
-# content += "Total success probability: " + data.total_error + "<br>";
-#
-# return content;
-# }
+    def explain_data(self, data, experiment):
+        return "Distance at point ({}, {}): {} <br>".format(data["x"], data["y"], data["dist"]) \
+            + "error rate in unit cell: {} with a total volume of {} <br>".format(data["indiv_error"], data["total_volume"]) \
+            + "Total success probability: {} <br>".format(data["total_error"])
