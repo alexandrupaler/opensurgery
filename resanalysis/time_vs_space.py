@@ -1,16 +1,16 @@
 import math
 
-from resanalysis import res_utils as resu
-from resanalysis import cube_to_physical as qre
+from .res_utils import local_logspace, local_linspace, to_rgb
+from .cube_to_physical import Qentiana
 
 class TimeVsSpace:
     def __init__(self):
         #
         self.nr_items = 100
         # log spaced volume scaling factor
-        self.global_v = resu.local_logspace(-2, 2, self.nr_items)
+        self.global_v = local_logspace(-2, 2, self.nr_items)
         # scaling factor space
-        self.global_s = resu.local_linspace(0.1, 2, self.nr_items)
+        self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
         self.explanation = "Comparison of two different optimization heuristics (time and space). " \
                            "In blue/green areas space optimization is better compared to the time optimization. " \
@@ -36,7 +36,7 @@ class TimeVsSpace:
             for j in range(len(self.global_s)):
                 space_param = math.ceil(self.global_s[j] * space_min)
 
-                qre1 = qre.Qentiana(t_count = 0,
+                qre1 = Qentiana(t_count = 0,
                                     max_logical_qubits = space_param,
                                     max_time_units = volume_min/space_param,
                                     gate_err_rate = p_err)
@@ -44,7 +44,7 @@ class TimeVsSpace:
                 # ret_1 = calculate_total(volume_min, space_param, p_err)
 
                 vol_param = math.ceil(self.global_v[i] * volume_min)
-                qre2 = qre.Qentiana(t_count = 0,
+                qre2 = Qentiana(t_count = 0,
                                     max_logical_qubits = space_min,
                                     max_time_units = vol_param / space_min,
                                     gate_err_rate = p_err)
@@ -97,9 +97,9 @@ class TimeVsSpace:
         else:
             component_red = 255
 
-        red = resu.to_rgb(component_red)
-        green = resu.to_rgb(component_green)
-        blue = resu.to_rgb(component_blue)
+        red = to_rgb(component_red)
+        green = to_rgb(component_green)
+        blue = to_rgb(component_blue)
 
         return "rgb({}, {}, {})".format(red, green, blue)
 

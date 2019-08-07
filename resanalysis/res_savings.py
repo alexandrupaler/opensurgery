@@ -1,16 +1,16 @@
 import math
 
-from resanalysis import res_utils as resu
-from resanalysis import cube_to_physical as qre
+from .res_utils import local_logspace, local_linspace, to_rgb
+from .cube_to_physical import Qentiana
 
 class ResourceSavings:
     def __init__(self):
         #
         self.nr_items = 100
         # log spaced volume scaling factor
-        self.global_v = resu.local_logspace(-2, 2, self.nr_items)
+        self.global_v = local_logspace(-2, 2, self.nr_items)
         # scaling factor space
-        self.global_s = resu.local_linspace(0.1, 2, self.nr_items)
+        self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
         self.explanation = "The initial circuit is at position (1,1) and any optimization will change the " \
                            "volume and space factor. The final position will show how much resource savings " \
@@ -34,7 +34,7 @@ class ResourceSavings:
 
         data = []
 
-        qre1 = qre.Qentiana(t_count=0,
+        qre1 = Qentiana(t_count=0,
                             max_logical_qubits=start_space,
                             max_time_units=start_volume / start_space,
                             gate_err_rate=p_err)
@@ -52,7 +52,7 @@ class ResourceSavings:
 
 
                 # If the initial volume is scaled like this
-                qre2 = qre.Qentiana(t_count=0,
+                qre2 = Qentiana(t_count=0,
                                     max_logical_qubits=space_param,
                                     max_time_units=vol_param / space_param,
                                     gate_err_rate=p_err)
@@ -91,7 +91,7 @@ class ResourceSavings:
         return data
 
     def color_interpretation(d):
-        rgb = resu.to_rgb(d["ratio"])
+        rgb = to_rgb(d["ratio"])
         return "rgb({},{},{})".format(rgb, rgb, rgb)
 
     def explain_data(self, data, experiment):

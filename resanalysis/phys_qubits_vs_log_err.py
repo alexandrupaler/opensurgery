@@ -1,16 +1,16 @@
 import math
 
-from resanalysis import res_utils as resu
-from resanalysis import cube_to_physical as qre
+from .res_utils import local_linspace, local_logspace, to_rgb
+from .cube_to_physical import Qentiana
 
 class PhysicalQubitsVsLogicalError:
     def __init__(self):
         #
         self.nr_items = 100
         # log spaced volume scaling factor
-        self.global_v = resu.local_logspace(-2, 2, self.nr_items)
+        self.global_v = local_logspace(-2, 2, self.nr_items)
         # scaling factor space
-        self.global_s = resu.local_linspace(0.1, 2, self.nr_items)
+        self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
         self.explanation = "The initial circuit is at position (1,1) and any optimization will change the " \
                            "volume and space factor. The final position will show how much resource savings " \
@@ -54,10 +54,10 @@ class PhysicalQubitsVsLogicalError:
                 scaled_volume = math.ceil(volume * self.global_v[i])
 
                 # this is the distance that fits on patch
-                dist = qre.Qentiana.max_distance_to_fit_log_qubits_on_phys_qubits(scaled_nr_log_qubits, total_num_physical_qubits)
+                dist = Qentiana.max_distance_to_fit_log_qubits_on_phys_qubits(scaled_nr_log_qubits, total_num_physical_qubits)
 
                 # the per log unit approximated failure is computed from the phys err rate and the distance
-                err_per_log_unit = qre.Qentiana.vba_p_logical(p_err, dist)
+                err_per_log_unit = Qentiana.vba_p_logical(p_err, dist)
 
                 # the entire volume will fail with this prob
                 err_per_scaled_volume = self.total_err(err_per_log_unit, scaled_volume)
@@ -70,7 +70,7 @@ class PhysicalQubitsVsLogicalError:
                     "indiv_error"   : err_per_log_unit,
                     "total_error"   : err_per_scaled_volume,
                     "total_volume"  : scaled_volume,
-                    "qubits_used"   : qre.Qentiana.phys_qubits_for_all_log_qubits(scaled_nr_log_qubits, dist)
+                    "qubits_used"   : Qentiana.phys_qubits_for_all_log_qubits(scaled_nr_log_qubits, dist)
 
                 })
 
@@ -95,7 +95,7 @@ class PhysicalQubitsVsLogicalError:
 
 
     def color_interpretation(d):
-        rgb = resu.to_rgb(d["total_error"])
+        rgb = to_rgb(d["total_error"])
         return "rgb({},{},{})".format(rgb)
 
     def explain_data(self, data, experiment):
