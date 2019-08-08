@@ -94,7 +94,7 @@ class PhysicalQubitsVsLogicalError:
         return data
 
 
-    def color_interpretation(d):
+    def color_interpretation(self, d):
         rgb = to_rgb(d["total_error"])
         return "rgb({},{},{})".format(rgb)
 

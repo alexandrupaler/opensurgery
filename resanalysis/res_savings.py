@@ -90,7 +90,7 @@ class ResourceSavings:
 
         return data
 
-    def color_interpretation(d):
+    def color_interpretation(self, d):
         rgb = to_rgb(d["ratio"])
         return "rgb({},{},{})".format(rgb, rgb, rgb)
 
