@@ -132,6 +132,9 @@ class DistanceBins:
         """
         Update y axis
         """
+        if len(data) == 0:
+            return
+
         self.reset_min_max_y()
         for i in range(len(data)):
             self.store_min_max_y(data[i]["number_of_physical_qubits"])
@@ -150,8 +153,8 @@ class DistanceBins:
         for i in range(len(self.x_axis_values)):
             data.append({
                 "x": self.x_axis_values[i],
-                "number_of_physical_qubits": 0,
-                "original_number_of_physical_qubits": 0,
+                "number_of_physical_qubits": 1,
+                "original_number_of_physical_qubits": 1,
                 "dist": 0,
                 "use_data_bus": False
             })
