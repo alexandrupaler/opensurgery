@@ -120,14 +120,32 @@ class DistanceBins:
                 "use_data_bus": use_data_bus
             })
 
+        self.update_y_axis(data)
+
         return {
             "data": data,
             "dist_changes": dist_changes
         }
 
 
+    def update_y_axis(self, data):
+        """
+        Update y axis
+        """
+        self.reset_min_max_y()
+        for i in range(len(data)):
+            self.store_min_max_y(data[i]["number_of_physical_qubits"])
+            self.store_min_max_y(data[i]["original_number_of_physical_qubits"])
+        # recompute the values on the axis
+        min_log = math.floor(math.log10(self.p___min_y))
+        max_log = math.ceil(math.log10(self.p___max_y))
+        if (max_log == min_log):
+            max_log += 1
+        self.y_axis = local_logspace(min_log, max_log, self.nr_items)
+
+
     def empty_data(self):
-        data = {}
+        data = []
 
         for i in range(len(self.x_axis_values)):
             data.append({
@@ -138,13 +156,14 @@ class DistanceBins:
                 "use_data_bus": False
             })
 
+        self.update_y_axis(data)
+
         ret = {
             "data" : data,
             "dist_changes": []
         }
 
         return ret
-
 
     def explain_data(self, data, experiment):
         curr_volume = math.ceil(data["y"] * experiment["volume"])
