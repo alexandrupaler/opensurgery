@@ -12,6 +12,8 @@ class TimeVsSpace:
         # scaling factor space
         self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
+        self.title = "Time Vs Space"
+        #
         self.explanation = "Comparison of two different optimization heuristics (time and space). " \
                            "In blue/green areas space optimization is better compared to the time optimization. " \
                            "Purple/red areas are not self-consistent (not allowed) and in white areas " \

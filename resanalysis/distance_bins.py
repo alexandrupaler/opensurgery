@@ -12,6 +12,8 @@ class DistanceBins:
         # scaling factor  space
         self.y_axis = local_logspace(2, 8, self.nr_items)
         #
+        self.title = "Distance Bins"
+        #
         self.explanation = "Tradeoff between volume and total number of " \
                            "physical qubits. Vertical lines are changes in distance."
 
@@ -27,6 +29,10 @@ class DistanceBins:
         self.p___just_clicked = True
         #
         self.reset_min_max_y()
+
+        # A single console message. The same everywhere
+        self.message = ""
+
 
     def get_default_parameters(self):
         parameters = {}
@@ -120,6 +126,10 @@ class DistanceBins:
                 "use_data_bus": use_data_bus
             })
 
+            if self.x_axis_values[i] == 1.0:
+                self.message = "At volume scaling {} with err rate {} <br>".format("1.0", experiment["physical_error_rate"]) \
+                        + "there are savings ({}) if footprint overhead is reduced.".format(use_data_bus)
+
         self.update_y_axis(data)
 
         return {
@@ -172,8 +182,7 @@ class DistanceBins:
         # curr_volume = math.ceil(data["y"] * experiment["volume"])
         # curr_space = math.ceil(data["x"] * experiment["footprint"])
 
-        return "At volume scaling {} with err rate {} <br>".format(data["x"], experiment["physical_error_rate"]) \
-               + "use {} ".format(data["use_data_bus"])
+        return self.message
 
 """
 From old source

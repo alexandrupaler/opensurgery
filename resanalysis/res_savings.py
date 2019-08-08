@@ -12,6 +12,8 @@ class ResourceSavings:
         # scaling factor space
         self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
+        self.title ="No Clue"
+        #
         self.explanation = "The initial circuit is at position (1,1) and any optimization will change the " \
                            "volume and space factor. The final position will show how much resource savings " \
                            "can be expected. Darker colors are better."
