@@ -280,6 +280,7 @@ class Qentiana:
         results = {
                 "levels"                        : self.number_of_distillation_levels,
                 "number_of_physical_qubits"     : total_qubits,
+                "num_data_qubits"               : num_data_qubits,
                 "time"                          : execution_time_secs,
                 "distance"                      : self.parameters["data_code_distance"]
         }

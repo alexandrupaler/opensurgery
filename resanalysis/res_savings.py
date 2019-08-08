@@ -60,7 +60,7 @@ class ResourceSavings:
                                     gate_err_rate=p_err)
                 ret_2 = qre2.compute_physical_resources()
 
-                ratio = ret_2["number_of_physical_qubits"] / ret_1["number_of_physical_qubits"]
+                ratio = ret_2["num_data_qubits"] / ret_1["num_data_qubits"]
 
                 data.append({
                     "x"                 : self.global_s[j],

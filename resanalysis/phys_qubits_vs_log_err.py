@@ -86,7 +86,7 @@ class PhysicalQubitsVsLogicalError:
                 data.append({
                     "x"             : self.global_s[j],
                     "y"             : self.global_v[i],
-                    "dist"          : 0,
+                    "distance"      : 0,
                     "indiv_error"   : 0,
                     "total_volume"  : 0,
                     "qubits_used"   : 0,
@@ -100,8 +100,9 @@ class PhysicalQubitsVsLogicalError:
         rgb = to_rgb(d["total_error"])
         return "rgb({},{},{})".format(rgb, rgb, rgb)
 
+
     def explain_data(self, data, experiment):
-        return "Distance at point ({}, {}): {} <br>".format(data["x"], data["y"], data["dist"]) \
+        return "Distance at point ({}, {}): {} <br>".format(data["x"], data["y"], data["distance"]) \
             + "error rate in unit cell: {} with a total volume of {} <br>".format(data["indiv_error"], data["total_volume"]) \
             + "Total success probability: {} <br>".format(data["total_error"])
 

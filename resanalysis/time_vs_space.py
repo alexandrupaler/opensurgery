@@ -53,7 +53,7 @@ class TimeVsSpace:
                 ret_2 = qre2.compute_physical_resources()
                 # ret_2 = calculate_total(vol_param, space_min, p_err)
 
-                ratio = ret_2["number_of_physical_qubits"] / ret_1["number_of_physical_qubits"]
+                ratio = ret_2["num_data_qubits"] / ret_1["num_data_qubits"]
 
                 data.append({
                     "x": self.global_s[j],
@@ -90,18 +90,18 @@ class TimeVsSpace:
         component_red       = data["ratio"]
         component_blue      = data["ratio"]
 
+        red = to_rgb(component_red)
+        green = to_rgb(component_green)
+        blue = to_rgb(component_blue)
+
         # TODO: repair below instead of hardcoded
         # analysis = resu.analysis(data)
         analysis = {"ok": True}
 
         if analysis["ok"]:
-            component_green = 255
+            green = 255
         else:
-            component_red = 255
-
-        red = to_rgb(component_red)
-        green = to_rgb(component_green)
-        blue = to_rgb(component_blue)
+            red = 255
 
         return "rgb({}, {}, {})".format(red, green, blue)
 
