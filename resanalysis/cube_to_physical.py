@@ -304,6 +304,16 @@ class Qentiana:
     """
         Counting utilities
     """
+
+    @staticmethod
+    def inv_target_error_per_data_round(target_error_data_round, total_elements):
+        # Computes a safety factor from target error per data round and total volume
+        safety = 1 / (target_error_data_round  * total_elements)
+        return safety
+        # this is the inverse of
+        # target_error_data_round = 1 / (self.parameters["safety_factor"] * total_data_rounds)
+
+
     @staticmethod
     def phys_qubits_for_all_log_qubits(nr_logic_qubits, distance):
         # A previous version in Javascript counted also the qubits on the boundaries

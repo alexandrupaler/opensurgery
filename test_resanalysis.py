@@ -1,6 +1,7 @@
 import json
 
 from resanalysis.cube_to_physical import Qentiana
+from resanalysis.distance_bins import  DistanceBins
 from resanalysis.phys_qubits_vs_log_err import PhysicalQubitsVsLogicalError
 from resanalysis.time_vs_space import TimeVsSpace
 from resanalysis.res_savings import ResourceSavings
@@ -22,6 +23,12 @@ def main():
     qentiana = Qentiana(t_count=100, max_logical_qubits=10)
     res_values = qentiana.compute_physical_resources()
     print("Resource prediction: ", res_values)
+
+    # construct
+    db = DistanceBins()
+    params = {}
+    data = db.gen_data(experiment=expr, parameters=params)
+    # print(data)
 
     # construct
     pqvle = PhysicalQubitsVsLogicalError()
