@@ -166,8 +166,8 @@ class DistanceBins:
         return ret
 
     def explain_data(self, data, experiment):
-        curr_volume = math.ceil(data["y"] * experiment["volume"])
-        curr_space = math.ceil(data["x"] * experiment["footprint"])
+        # curr_volume = math.ceil(data["y"] * experiment["volume"])
+        # curr_space = math.ceil(data["x"] * experiment["footprint"])
 
         return "At volume scaling {} with err rate {} <br>".format(data["x"], experiment["physical_error_rate"]) \
                + "use {} ".format(data["use_data_bus"])
