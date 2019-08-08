@@ -96,7 +96,7 @@ class PhysicalQubitsVsLogicalError:
 
     def color_interpretation(self, d):
         rgb = to_rgb(d["total_error"])
-        return "rgb({},{},{})".format(rgb)
+        return "rgb({},{},{})".format(rgb, rgb, rgb)
 
     def explain_data(self, data, experiment):
         return "Distance at point ({}, {}): {} <br>".format(data["x"], data["y"], data["dist"]) \

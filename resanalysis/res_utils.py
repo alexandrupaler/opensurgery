@@ -84,7 +84,7 @@ def local_linspace_2(middle, plus_minus_range, num = 50):
     RGB functions for the interpretation of a value to integers in range 0..255
 """
 def to_rgb(param):
-    return (255 if (param > 1) else math.round(param * 255))
+    return (255 if (param > 1) else round(param * 255))
 
 def from_rgb(param):
     # why is 2 here?
