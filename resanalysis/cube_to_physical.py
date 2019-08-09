@@ -8,7 +8,8 @@
 import math
 
 class Qentiana:
-    def __init__(self, t_count, max_logical_qubits, max_time_units = 0, gate_err_rate = 0.001):
+    def __init__(self, t_count, experiment):
+    # def __init__(self, t_count, max_logical_qubits, max_time_units = 0, gate_err_rate = 0.001):
         """
         Constructor. Considers that T-count == T-depth if max_time_units is zero
 
@@ -23,12 +24,12 @@ class Qentiana:
         self.parameters = {
                             # Gate error rate that sets how quickly logical errors are suppressed.
                             # 1e-3 means a factor of 10 suppression with each increase of d by 2.
-                            "characteristic_gate_error_rate" : gate_err_rate,#0.001,
+                            "characteristic_gate_error_rate" : experiment["physical_error_rate"],#0.001,
                             # Time required to execute a single round of the surface code circuit detecting errors.
                             "total_surface_code_cycle_time_ns": 1000,
                             # Safety factor S means that whenever we wish to do N things reliably,
                             # we target a failure probability of 1/(SN).
-                            "safety_factor": 99,
+                            "safety_factor": experiment["safety_factor"],#99,
                             # d1 must be at least 15 to permit enough space for the state injection
                             "l1_distillation_code_distance_d1": 15,
                             # d2 could in principle be less than 15, but it seems unlikely you would
@@ -40,6 +41,10 @@ class Qentiana:
                             # Thus, the circuit is Clifford dominated and then its depth is longer
                             # Multiplication factor = 2. used in self.compute_data_code_distance()
                             "multiplication_factor_for_Clifford_domination" : 2}
+
+        self.max_logical_qubits = experiment["footprint"]
+        self.max_time_units = experiment["depth_units"]
+
         #
         #
         # hard coded dimensions of distillation
@@ -52,18 +57,15 @@ class Qentiana:
 
         self.t_count = t_count
         if self.t_count == 0:
-            if max_time_units != 0:
+            if self.max_time_units != 0:
                 """
                 If the T-count was not specified, but the depth of the circuit was
                 then an approximation is to consider that the depth is T-count
                 """
-                self.t_count = math.ceil(max_time_units / self.dist_box_dimensions["t"])
+                self.t_count = math.ceil(self.max_time_units / self.dist_box_dimensions["t"])
             else:
                 print("PROBLEM!!! Both t_count and max_time_units are zero! Results will be wrong!")
 
-
-        self.max_logical_qubits = max_logical_qubits
-        self.max_time_units = max_time_units
 
         # A scale is the ratio between data patch qubit distance and the distillation distance
         # It effectively says how many logical qubit patches of distance d
@@ -96,9 +98,10 @@ class Qentiana:
 
         n_box_dimensions = {"x" : math.ceil(self.dist_box_dimensions["x"] * factor),
                             "y" : math.ceil(self.dist_box_dimensions["y"] * factor),
-                            "t" : 30}#math.ceil(self.dist_box_dimensions["t"] * factor)}
+                            "t" : math.ceil(self.dist_box_dimensions["t"] * factor)}
 
         return n_box_dimensions
+
 
     def compute_number_of_dist_levels(self):
         #
@@ -292,14 +295,17 @@ class Qentiana:
             Compute the execution time
             If max_time_units was not specified, then assume T-depth is the worst case
         """
-        execution_rounds = self.compute_number_of_rounds(elements=self.t_count,
-                                                         element_distance=self.dist_box_dimensions["distance"],
-                                                         element_units_in_time=self.dist_box_dimensions["t"])
+        execution_rounds = 0
+
         if self.max_time_units != 0:
             # Here there is no worst-case, but a computation based on the specified parameter
             execution_rounds = self.compute_number_of_rounds(elements=self.max_time_units,
                                                              element_distance=self.parameters["data_code_distance"],
                                                              element_units_in_time=1)
+        else:
+            execution_rounds = self.compute_number_of_rounds(elements=self.t_count,
+                                          element_distance=self.dist_box_dimensions["distance"],
+                                          element_units_in_time=self.dist_box_dimensions["t"])
         return execution_rounds
 
     """
