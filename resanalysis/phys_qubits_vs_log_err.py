@@ -37,12 +37,11 @@ class PhysicalQubitsVsLogicalError:
 
     def gen_data(self, experiment, parameters = None):
         """
-
         :param experiment:
         :return:
         """
         nr_log_qubits = experiment["footprint"]
-        volume = experiment["volume"]
+        time = experiment["depth_units"]
         p_err = experiment["physical_error_rate"]
 
         # parameters are collected by the plot var
@@ -53,7 +52,7 @@ class PhysicalQubitsVsLogicalError:
         for i in range(len(self.global_v)):
             for j in range(len(self.global_s)):
                 scaled_nr_log_qubits = math.ceil(nr_log_qubits * self.global_s[j])
-                scaled_volume = math.ceil(volume * self.global_v[i])
+                scaled_volume = math.ceil(time * self.global_v[i]) * nr_log_qubits
 
                 # this is the distance that fits on patch
                 dist = Qentiana.max_distance_to_fit_log_qubits_on_phys_qubits(scaled_nr_log_qubits, total_num_physical_qubits)

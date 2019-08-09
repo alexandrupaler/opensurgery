@@ -1,51 +1,49 @@
 import json
 
 from resanalysis.cube_to_physical import Qentiana
+from resanalysis.experiment import Experiment
+
 from resanalysis.distance_bins import  DistanceBins
 from resanalysis.phys_qubits_vs_log_err import PhysicalQubitsVsLogicalError
 from resanalysis.time_vs_space import TimeVsSpace
 from resanalysis.res_savings import ResourceSavings
 
 def main():
-    jsonstr = '{"Chem 250": {\
-                        "volume": 756142777500,\
-                        "footprint": 512,\
-                        "depth": 1,\
-                        "physical_error_rate": 0.001,\
-                        "routing_overhead": 50,\
-                        "bool_distance": true,\
-                        "enforced_distance": 24.7,\
-                        "safety_factor": 9900\
-                        }' \
-              '}'
-    expr = json.loads(jsonstr)["Chem 250"]
+    ex1 = Experiment()
+    ex1.props["footprint"] = 10
+    ex1.props["t_count"] = 100
+    ex1.props["prefer_depth_over_t_count"] = False
 
-    qentiana = Qentiana(t_count=100, max_logical_qubits=10)
+    qentiana = Qentiana(ex1.props)
     res_values = qentiana.compute_physical_resources()
     print("Resource prediction: ", res_values)
 
+    ex2 = Experiment()
+    ex2.props["footprint"] = 10
+    ex2.props["depth_units"] = 100
+    ex2.props["prefer_depth_over_t_count"] = True
     # construct
     db = DistanceBins()
     params = {}
-    data = db.gen_data(experiment=expr, parameters=params)
+    data = db.gen_data(experiment=ex2.props, parameters=params)
     # print(data)
 
     # construct
     pqvle = PhysicalQubitsVsLogicalError()
     params = {"total_num_physical_qubits": 500}
-    data = pqvle.gen_data(experiment=expr, parameters=params)
+    data = pqvle.gen_data(experiment=ex2.props, parameters=params)
     # print(data)
 
     # construct
     tvs = TimeVsSpace()
     params = {}
-    data = tvs.gen_data(experiment=expr, parameters=params)
+    data = tvs.gen_data(experiment=ex2.props, parameters=params)
     # print(data)
 
     # construct
     rs = ResourceSavings()
     params = {}
-    data = rs.gen_data(experiment=expr, parameters=params)
+    data = rs.gen_data(experiment=ex2.props, parameters=params)
     # print(data)
 
 

@@ -8,15 +8,10 @@
 import math
 
 class Qentiana:
-    def __init__(self, t_count, experiment):
-    # def __init__(self, t_count, max_logical_qubits, max_time_units = 0, gate_err_rate = 0.001):
+    def __init__(self, experiment):
         """
-        Constructor. Considers that T-count == T-depth if max_time_units is zero
-
-        :param t_count:
-        :param max_logical_qubits:
-        :param max_time_units:
-        :param gate_err_rate:
+        Constructor
+        :param experiment: dictionary of key-values. See Experiment class.
         """
         """
             Parameters
@@ -40,31 +35,33 @@ class Qentiana:
                             # For the moment assume that the T-depth is not really the worst case in time
                             # Thus, the circuit is Clifford dominated and then its depth is longer
                             # Multiplication factor = 2. used in self.compute_data_code_distance()
-                            "multiplication_factor_for_Clifford_domination" : 2}
-
-        self.max_logical_qubits = experiment["footprint"]
-        self.max_time_units = experiment["depth_units"]
+                            "multiplication_factor_for_Clifford_domination" : 2,
+                            # For the estimation of the depth of a volume (see compute_execution_rounds()) either
+                            # option_A: the approximation using T_depth=T_count * multiplication_factor_for_Clifford_domination
+                            # option_B: the experiment["depth_units"] is used
+                            # option_A is more worst-case like, if for example the depth is only a rule-of-thumb calculation
+                            "prefer_depth_over_t_count": experiment["prefer_depth_over_t_count"]}
 
         #
         #
         # hard coded dimensions of distillation
         # using the dimensions from https://arxiv.org/pdf/1808.06709.pdf
         # These units are distance agnostic
-        self.dist_box_dimensions = {"x"             : 4,
-                                    "y"             : 8,
-                                    "t"             : 6.5,
-                                    "distance"      : -1}
+        self.dist_box_dimensions = {"x": 4,
+                                    "y": 8,
+                                    "t": 6.5,
+                                    "distance": -1}
 
-        self.t_count = t_count
-        if self.t_count == 0:
-            if self.max_time_units != 0:
-                """
-                If the T-count was not specified, but the depth of the circuit was
-                then an approximation is to consider that the depth is T-count
-                """
-                self.t_count = math.ceil(self.max_time_units / self.dist_box_dimensions["t"])
-            else:
-                print("PROBLEM!!! Both t_count and max_time_units are zero! Results will be wrong!")
+
+        self.max_logical_qubits = experiment["footprint"]
+        self.max_time_units = experiment["depth_units"]
+        self.t_count = experiment["t_count"]
+
+        if self.t_count == 0 and self.max_time_units == 0:
+            print("PROBLEM!!! Both t_count and max_time_units are zero! Results will be wrong!")
+
+        if self.max_time_units == 0 and self.parameters["prefer_depth_over_t_count"] == True:
+            print("PROBLEM!!! The specified depth is zero and t_count is not considered as depth!")
 
 
         # A scale is the ratio between data patch qubit distance and the distillation distance
@@ -74,27 +71,19 @@ class Qentiana:
         self.number_of_distillation_levels = self.compute_number_of_dist_levels()
         # lock value
         # self.number_of_distillation_levels = 1
-        self.error_message = "none"
         if self.number_of_distillation_levels not in [1, 2]:
             # I do not know what this is, but should exit
-            self.error_message = "----> Error! 3+ levels."
-            print(self.error_message)
-
-        """
-            In case max 2 levels distillation
-        """
-        # update the key "distance" in self.dist_box_dimensions
-        self.compute_distillation_box_distance()
-
-        # Compute the data patch distance as an approximation starting from:
-        # - T-count / T-depth
-        # - number of logical qubits
-        # - multiplication_factor_for_Clifford_domination
-        self.compute_data_code_distance()
+            print("PROBLEM!!! ----> Error! 3+ distillation levels.")
 
 
     def compute_dist_box_in_patch_units(self):
-        factor = float(self.dist_box_dimensions["distance"]) / float(self.parameters["data_code_distance"])
+        """
+        When drawing the surgery diagrams, the distillation boxes have different units compared to the data patches
+        The factor is the ratio between the distance of the dist boxes and the data patch distances
+        TODO: Correct the computation here. For level2 the distance computation is not correct.
+        :return:
+        """
+        factor = float(self.dist_box_dimensions["depth_distance"]) / float(self.parameters["data_code_distance"])
 
         n_box_dimensions = {"x" : math.ceil(self.dist_box_dimensions["x"] * factor),
                             "y" : math.ceil(self.dist_box_dimensions["y"] * factor),
@@ -133,7 +122,13 @@ class Qentiana:
         l2_output_error = l2_Clifford_prep_error + self.vba_distillation_p_out(l2_T_gate_error, xxx_levels = 1)#aici nu trebuie un doi?
 
         # Safe target error per T gate.
-        target_error_per_T_gate = 1 / (self.parameters["safety_factor"] * self.t_count)
+        local_t_count = self.t_count
+        # It could be that the t_count was not specified, so we need a method to approximate it from the specified depth
+        # TODO: For the moment, it is the depth in units -- over worst case?
+        if local_t_count == 0:
+            local_t_count = self.max_time_units
+
+        target_error_per_T_gate = 1 / (self.parameters["safety_factor"] * local_t_count)
         #
         # Required number of distillation levels for this algorithm.
         nr_levels = 2
@@ -193,7 +188,7 @@ class Qentiana:
         if (self.number_of_distillation_levels == 2) and (dist_l2 <= 2 * dist_l1):
             chosen_distance_in_depth = 2 * dist_l1
 
-        self.dist_box_dimensions["distance"] = chosen_distance_in_depth
+        self.dist_box_dimensions["depth_distance"] = chosen_distance_in_depth
 
 
     def compute_data_code_distance(self):
@@ -209,7 +204,6 @@ class Qentiana:
         """
         execution_rounds = self.compute_execution_rounds()
 
-
         """
         Assume that the logical qubit patches are executed in a sequence
         Each logical qubit is ONE unit long
@@ -218,14 +212,6 @@ class Qentiana:
         total_data_rounds = self.compute_number_of_rounds(elements = self.max_logical_qubits,
                                                           element_distance = execution_rounds,
                                                           element_units_in_time = 1)
-
-        if self.max_time_units == 0:
-            """
-            The total execution time is not known, thus T-count is worst-case
-            If the T-count is the worst case (and max_time_units was not specified)
-            then the multiplication factor is used to determine the max_time_units
-            """
-            total_data_rounds *= self.parameters["multiplication_factor_for_Clifford_domination"]
 
         target_error_per_data_round = 1 / (self.parameters["safety_factor"] * total_data_rounds)
 
@@ -257,6 +243,7 @@ class Qentiana:
 
         return total_dist_qubits
 
+
     def compute_footprint_data_qubits(self):
         # Total number of data qubits, including communication channels.
         # Have unit dimensions -> (1*1)
@@ -268,6 +255,18 @@ class Qentiana:
 
 
     def compute_physical_resources(self):
+        """
+            In case max 2 levels distillation
+        """
+        # update the key "distance" in self.dist_box_dimensions
+        self.compute_distillation_box_distance()
+
+        # Compute the data patch distance as an approximation starting from:
+        # - T-count / T-depth
+        # - number of logical qubits
+        # - multiplication_factor_for_Clifford_domination
+        self.compute_data_code_distance()
+
         """
             Compute the number of physical qubits
         """
@@ -290,22 +289,31 @@ class Qentiana:
 
         return results
 
+
     def compute_execution_rounds(self):
         """
-            Compute the execution time
-            If max_time_units was not specified, then assume T-depth is the worst case
+            Compute the number of surface code cycles needed to execute the computation
         """
         execution_rounds = 0
 
-        if self.max_time_units != 0:
+        # if self.max_time_units != 0:
+        if self.parameters["prefer_depth_over_t_count"]:
             # Here there is no worst-case, but a computation based on the specified parameter
             execution_rounds = self.compute_number_of_rounds(elements=self.max_time_units,
                                                              element_distance=self.parameters["data_code_distance"],
                                                              element_units_in_time=1)
         else:
+            """
+            The total execution time is not known, thus T-count is worst-case
+            If the T-count is the worst case (and max_time_units was not specified)
+            then the multiplication factor is used to determine the max_time_units
+            """
             execution_rounds = self.compute_number_of_rounds(elements=self.t_count,
-                                          element_distance=self.dist_box_dimensions["distance"],
+                                          element_distance=self.dist_box_dimensions["depth_distance"],
                                           element_units_in_time=self.dist_box_dimensions["t"])
+
+            execution_rounds *= self.parameters["multiplication_factor_for_Clifford_domination"]
+
         return execution_rounds
 
     """

@@ -2,6 +2,7 @@ import math
 
 from .res_utils import local_logspace, local_linspace, to_rgb
 from .cube_to_physical import Qentiana
+from .experiment import Experiment
 
 class ResourceSavings:
     def __init__(self):
@@ -12,7 +13,7 @@ class ResourceSavings:
         # scaling factor space
         self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
-        self.title ="No Clue"
+        self.title ="Time AND Space"
         #
         self.explanation = "The initial circuit is at position (1,1) and any optimization will change the " \
                            "volume and space factor. The final position will show how much resource savings " \
@@ -28,18 +29,19 @@ class ResourceSavings:
 
     def gen_data(self, experiment, parameters = None):
         # // 2D Array
-        # // take the globale experiment for the moment
 
-        start_volume = experiment["volume"]
+        start_time = experiment["depth_units"]
         start_space = experiment["footprint"]
         p_err = experiment["physical_error_rate"]
 
         data = []
 
-        qre1 = Qentiana(t_count=0,
-                            max_logical_qubits=start_space,
-                            max_time_units=start_volume / start_space,
-                            gate_err_rate=p_err)
+        ex1 = Experiment()
+        ex1.props["footprint"] = start_space
+        ex1.props["depth_units"] = start_time
+        ex1.props["physical_error_rate"] = p_err
+        ex1.props["prefer_depth_over_t_count"] = True
+        qre1 = Qentiana(ex1.props)
         ret_1 = qre1.compute_physical_resources()
 
         for i in range(len(self.global_v)):
@@ -50,14 +52,16 @@ class ResourceSavings:
                 # hardware is scaled
                 space_param = math.ceil(self.global_s[j] * start_space)
                 # time is scaled -> thus volume is increased
-                vol_param = math.ceil(self.global_v[i] * start_volume)
+                time_param = math.ceil(self.global_v[i] * start_time)
 
 
                 # If the initial volume is scaled like this
-                qre2 = Qentiana(t_count=0,
-                                    max_logical_qubits=space_param,
-                                    max_time_units=vol_param / space_param,
-                                    gate_err_rate=p_err)
+                ex2 = Experiment()
+                ex2.props["footprint"] = space_param
+                ex2.props["depth_units"] = time_param
+                ex2.props["physical_error_rate"] = p_err
+                ex2.props["prefer_depth_over_t_count"] = True
+                qre2 = Qentiana(ex2.props)
                 ret_2 = qre2.compute_physical_resources()
 
                 ratio = ret_2["num_data_qubits"] / ret_1["num_data_qubits"]

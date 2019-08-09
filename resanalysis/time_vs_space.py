@@ -2,6 +2,7 @@ import math
 
 from .res_utils import local_logspace, local_linspace, to_rgb
 from .cube_to_physical import Qentiana
+from .experiment import Experiment
 
 class TimeVsSpace:
     def __init__(self):
@@ -12,7 +13,7 @@ class TimeVsSpace:
         # scaling factor space
         self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
-        self.title = "Time Vs Space"
+        self.title = "Time OR Space"
         #
         self.explanation = "Comparison of two different optimization heuristics (time and space). " \
                            "In blue/green areas space optimization is better compared to the time optimization. " \
@@ -28,30 +29,31 @@ class TimeVsSpace:
 
 
     def gen_data(self, experiment, parameters = None):
-        volume_min = experiment["volume"]
-        space_min = experiment["footprint"]
+        time_orig = experiment["depth_units"]
+        space_orig = experiment["footprint"]
         p_err = experiment["physical_error_rate"]
 
         data = []
 
         for i in range(len(self.global_v)):
             for j in range(len(self.global_s)):
-                space_param = math.ceil(self.global_s[j] * space_min)
-
-                qre1 = Qentiana(t_count = 0,
-                                    max_logical_qubits = space_param,
-                                    max_time_units = volume_min/space_param,
-                                    gate_err_rate = p_err)
+                # Scale space
+                ex1 = Experiment()
+                ex1.props["footprint"] = math.ceil(self.global_s[j] * space_orig)
+                ex1.props["depth_units"] = time_orig
+                ex1.props["physical_error_rate"] = p_err
+                ex1.props["prefer_depth_over_t_count"] = True
+                qre1 = Qentiana(ex1.props)
                 ret_1 = qre1.compute_physical_resources()
-                # ret_1 = calculate_total(volume_min, space_param, p_err)
 
-                vol_param = math.ceil(self.global_v[i] * volume_min)
-                qre2 = Qentiana(t_count = 0,
-                                    max_logical_qubits = space_min,
-                                    max_time_units = vol_param / space_min,
-                                    gate_err_rate = p_err)
+                # Scale time
+                ex2 = Experiment()
+                ex2.props["footprint"] = space_orig
+                ex2.props["depth_units"] = math.ceil(self.global_v[i] * time_orig)
+                ex2.props["physical_error_rate"] = p_err
+                ex2.props["prefer_depth_over_t_count"] = True
+                qre2 = Qentiana(ex2.props)
                 ret_2 = qre2.compute_physical_resources()
-                # ret_2 = calculate_total(vol_param, space_min, p_err)
 
                 ratio = ret_2["num_data_qubits"] / ret_1["num_data_qubits"]
 

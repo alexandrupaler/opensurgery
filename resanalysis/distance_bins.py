@@ -3,6 +3,7 @@ import math
 
 from .res_utils import local_logspace, local_linspace_2
 from .cube_to_physical import Qentiana
+from .experiment import Experiment
 
 class DistanceBins:
     def __init__(self):
@@ -49,8 +50,8 @@ class DistanceBins:
         self.p___max_y = max(y_val, self.p___max_y)
 
     def gen_data(self, experiment, parameters = None):
-        volume_min = experiment["volume"]
-        space_min = experiment["footprint"]
+        time_orig = experiment["depth_units"]
+        space_orig = experiment["footprint"]
         p_err = experiment["physical_error_rate"]
 
         factor = (100 + experiment["routing_overhead"]) / 100
@@ -64,12 +65,14 @@ class DistanceBins:
         volume_param = 0
 
         for i in range(len(self.x_axis_values)):
-            volume_param = math.ceil(volume_min * self.x_axis_values[i])
+            scaled_time = math.ceil(time_orig * self.x_axis_values[i])
 
-            qre = Qentiana(t_count = 0,
-                            max_logical_qubits = space_min,
-                            max_time_units = volume_param/space_min,
-                            gate_err_rate = p_err)
+            ex1 = Experiment()
+            ex1.props["footprint"] = space_orig
+            ex1.props["depth_units"] = scaled_time
+            ex1.props["physical_error_rate"] = p_err
+            ex1.props["prefer_depth_over_t_count"] = True
+            qre = Qentiana(ex1.props)
             ret = qre.compute_physical_resources()
 
             if (dist_last != -1) and (dist_last != ret["distance"]):
@@ -84,13 +87,15 @@ class DistanceBins:
             use_data_bus = False
 
             # Eliminate the ancillas means multiply by 1 / factor
-            space_2 = math.ceil(space_min * (1 / factor))
-            volume_2 = math.ceil(volume_param * (1 / factor))
+            space_2 = math.ceil(space_orig * (1 / factor))
+            # volume_2 = math.ceil(volume_param * (1 / factor))
 
-            qre2 = Qentiana(t_count=0,
-                           max_logical_qubits=space_2,
-                           max_time_units=volume_2 / space_2,
-                           gate_err_rate=p_err)
+            ex2 = Experiment()
+            ex2.props["footprint"] = space_2
+            ex2.props["depth_units"] = scaled_time#volume_2 / space_2
+            ex2.props["physical_error_rate"] = p_err
+            ex2.props["prefer_depth_over_t_count"] = True
+            qre2 = Qentiana(ex2.props)
             ret_vol_2 = qre2.compute_physical_resources()
 
             #  Increase distance to lower res with data bus
@@ -101,13 +106,16 @@ class DistanceBins:
             while (qubits_inc_dist <= ret["number_of_physical_qubits"]) and (not use_data_bus):
                 iterations+=1
 
-                volume_inc_distance = volume_2 * increased_distance
-                # space_min is not number of patches, but number of logical qubits, and the data bus counts as a qubit
+                # volume_inc_distance = volume_2 * increased_distance
+                # space_orig is not number of patches, but number of logical qubits, and the data bus counts as a qubit
 
-                qre3 = Qentiana(t_count=0,
-                                max_logical_qubits=space_min,
-                                max_time_units=volume_inc_distance / space_min,
-                                gate_err_rate=p_err)
+                ex3 = Experiment()
+                ex3.props["footprint"] = space_orig
+                ex3.props["depth_units"] = scaled_time * increased_distance #volume_inc_distance / space_orig
+                ex3.props["physical_error_rate"] = p_err
+                ex3.props["prefer_depth_over_t_count"] = True
+
+                qre3 = Qentiana(ex3.props)
                 ret_3 = qre3.compute_physical_resources()
 
                 if (ret_3["distance"] <= increased_distance):
