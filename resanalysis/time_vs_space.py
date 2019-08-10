@@ -109,12 +109,12 @@ class TimeVsSpace:
 
 
     def explain_data(self, data, experiment):
-        curr_volume = math.ceil(data["y"] * experiment["volume"])
+        curr_time = math.ceil(data["y"] * experiment["depth_units"])
         curr_space = math.ceil(data["x"] * experiment["footprint"])
 
         return "{} {} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
                + "dist vol: {} having a footprint of log qubits<br>".format(data["dist_opt_vol"], curr_space) \
-               + "dist space: {} for a volume of {}<br>".format(data["dist_opt_space"], curr_volume) \
+               + "dist space: {} for a time of {}<br>".format(data["dist_opt_space"], curr_time) \
                + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"])\
                + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"])\
                + "qub vol: {}<br>".format(data["nr_target_vol"])\
