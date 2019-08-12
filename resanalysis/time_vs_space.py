@@ -15,10 +15,9 @@ class TimeVsSpace:
         #
         self.title = "Time OR Space"
         #
-        self.explanation = "Comparison of two different optimization heuristics (time and space). " \
-                           "In blue/green areas space optimization is better compared to the time optimization. " \
-                           "Purple/red areas are not self-consistent (not allowed) and in white areas " \
-                           "the time optimization is superior."
+        self.explanation = "Comparison of two different optimization heuristics (time OR space) in terms of resulting numbers of physical qubits" \
+                           "necessary for logical data patches (distillations are not included). " \
+                           "In blue areas time optimization is better. In green areas, space optimization is better." \
 
 
     def get_default_parameters(self):
@@ -60,10 +59,10 @@ class TimeVsSpace:
                 data.append({
                     "x": self.global_s[j],
                     "y": self.global_v[i],
-                    "dist_opt_vol": ret_1["distance"],
-                    "dist_opt_space": ret_2["distance"],
-                    "nr_target_vol": ret_1["number_of_physical_qubits"],
-                    "nr_target_space": ret_2["number_of_physical_qubits"],
+                    "dist_space_scale": ret_1["distance"],
+                    "dist_time_scale": ret_2["distance"],
+                    "nr_space_scale": ret_1["num_data_qubits"],
+                    "nr_time_scale": ret_2["num_data_qubits"],
                     "ratio": ratio,
                 })
 
@@ -77,10 +76,10 @@ class TimeVsSpace:
                 data.append({
                     "x"             : self.global_s[j],
                     "y"             : self.global_v[i],
-                    "dist_opt_vol"  : 0,
-                    "dist_opt_space": 0,
-                    "nr_target_vol" : 0,
-                    "nr_target_space": 0,
+                    "dist_space_scale"  : 0,
+                    "dist_time_scale": 0,
+                    "nr_space_scale" : 0,
+                    "nr_time_scale": 0,
                     "ratio"         : 0
                 })
 
@@ -88,22 +87,30 @@ class TimeVsSpace:
 
 
     def color_interpretation(self, data):
-        component_green     = data["ratio"]
-        component_red       = data["ratio"]
-        component_blue      = data["ratio"]
+
+        ratio1 = 1
+        ratio2 = 1
+
+        if data["nr_space_scale"] != 0:
+            ratio1 = data["nr_time_scale"] / data["nr_space_scale"]
+
+        if data["nr_time_scale"] != 0:
+            ratio2 = data["nr_space_scale"] / data["nr_time_scale"]
+
+        ratio = min(ratio1, ratio2)
+
+        component_green     = ratio
+        component_red       = ratio
+        component_blue      = ratio
 
         red = to_rgb(component_red)
         green = to_rgb(component_green)
         blue = to_rgb(component_blue)
 
-        # TODO: repair below instead of hardcoded
-        # analysis = resu.analysis(data)
-        analysis = {"ok": True}
-
-        if analysis["ok"]:
-            green = 255
+        if ratio == ratio1:
+            blue = 255
         else:
-            red = 255
+            green = 255
 
         return "rgb({}, {}, {})".format(red, green, blue)
 
@@ -113,11 +120,11 @@ class TimeVsSpace:
         curr_space = math.ceil(data["x"] * experiment["footprint"])
 
         return "{} {} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
-               + "dist vol: {} having a footprint of log qubits<br>".format(data["dist_opt_vol"], curr_space) \
-               + "dist space: {} for a time of {}<br>".format(data["dist_opt_space"], curr_time) \
-               + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"])\
-               + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"])\
-               + "qub vol: {}<br>".format(data["nr_target_vol"])\
-               + "qub spc: {}<br>".format(data["nr_target_space"])
+               + "dist time: {} having a footprint of log qubits<br>".format(data["dist_time_scale"], curr_space) \
+               + "dist space: {} for a time of {}<br>".format(data["dist_space_scale"], curr_time) \
+               + "qub time: {}<br>".format(data["nr_time_scale"])\
+               + "qub spc: {}<br>".format(data["nr_space_scale"])
+            #    + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"])\
+            #    + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"])\
 
 

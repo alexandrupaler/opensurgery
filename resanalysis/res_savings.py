@@ -13,11 +13,11 @@ class ResourceSavings:
         # scaling factor space
         self.global_s = local_linspace(0.1, 2, self.nr_items)
         #
-        self.title ="Time AND Space"
+        self.title = "Time AND Space"
         #
-        self.explanation = "The initial circuit is at position (1,1) and any optimization will change the " \
-                           "volume and space factor. The final position will show how much resource savings " \
-                           "can be expected. Darker colors are better."
+        self.explanation =  "Applying (time AND space) optimization at the same time. Resulting numbers of physical qubits" \
+                            "necessary for logical data patches (distillations are not included). " \
+                            "Darker colors are better. The initial circuit is at position (1,1)." \
 
     def get_default_parameters(self):
         #
@@ -69,11 +69,11 @@ class ResourceSavings:
                 data.append({
                     "x"                 : self.global_s[j],
                     "y"                 : self.global_v[i],
-                    "dist_opt_vol"      : ret_1["distance"],
-                    "dist_opt_space"    : ret_2["distance"],
-                    "nr_target_vol"     : ret_1["number_of_physical_qubits"],
-                    "nr_target_space"   : ret_2["number_of_physical_qubits"],
-                    "ratio"             : ratio
+                    "dist_space_scale": ret_1["distance"],
+                    "dist_time_scale": ret_2["distance"],
+                    "nr_space_scale": ret_1["num_data_qubits"],
+                    "nr_time_scale": ret_2["num_data_qubits"],
+                    "ratio": ratio
                 })
 
         return data
@@ -87,10 +87,10 @@ class ResourceSavings:
                 data.append({
                     "x"                 : self.global_s[j],
                     "y"                 : self.global_v[i],
-                    "dist_opt_vol"      : 0,
-                    "dist_opt_space"    : 0,
-                    "nr_target_vol"     : 0,
-                    "nr_target_space"   : 0,
+                    "dist_space_scale"  : 0,
+                    "dist_time_scale"   : 0,
+                    "nr_space_scale"    : 0,
+                    "nr_time_scale"     : 0,
                     "ratio"             : 0
                 })
 
@@ -105,10 +105,8 @@ class ResourceSavings:
         curr_space = math.ceil(data["x"] * experiment["footprint"])
 
         return "{} {} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
-               + "dist vol: {} having a footprint of log qubits<br>".format(data["dist_opt_vol"], curr_space) \
-               + "dist space: {} for a volume of {}<br>".format(data["dist_opt_space"], curr_time) \
-               + "tradeoff time scaling threshold:{}<br>".format(data["x"] * data["y"]) \
-               + "min scaling should be below tradeoff threshold:{}<br>".format(data["dist_opt_space"]) \
-               + "qub vol: {}<br>".format(data["nr_target_vol"]) \
-               + "qub spc: {}<br>".format(data["nr_target_space"])
+               + "dist time: {} having a footprint of log qubits<br>".format(data["dist_time_scale"], curr_space) \
+               + "dist space: {} for a time of {}<br>".format(data["dist_space_scale"], curr_time) \
+               + "qub time: {}<br>".format(data["nr_time_scale"])\
+               + "qub spc: {}<br>".format(data["nr_space_scale"])
 
