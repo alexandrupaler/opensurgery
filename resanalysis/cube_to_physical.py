@@ -196,28 +196,40 @@ class Qentiana:
         Compute data code distance. Consider the maximum number of units on the time axis
         :return:
         """
-        """
-        Total number of rounds of surface code error detection required to prepare the necessary number of T states.
-        T-count is T-depth when all T gates are sequential
-        Each distillation has known number of units in time
-        The distance has been computed in compute_distillation_scale_factor
-        """
-        execution_rounds = self.compute_execution_rounds()
 
-        """
-        Assume that the logical qubit patches are executed in a sequence
-        Each logical qubit is ONE unit long
-        And each unit has a distance of execution_rounds (from the distillations)
-        """
-        total_data_rounds = self.compute_number_of_rounds(elements = self.max_logical_qubits,
-                                                          element_distance = execution_rounds,
-                                                          element_units_in_time = 1)
+        prev_data_distance = -1
 
-        target_error_per_data_round = 1 / (self.parameters["safety_factor"] * total_data_rounds)
+        while prev_data_distance != self.parameters["data_code_distance"]:
 
-        # Code distance required to achieve the safe target error rate per data round.
-        self.parameters["data_code_distance"] = self.vba_distance(self.parameters["characteristic_gate_error_rate"],
-                                                                  target_error_per_data_round)
+            """
+            Save the prev data distance
+             data_code_distance is used in compute_execution_rounds, but is updated in this method.
+             In the absence of T-count, the execution rounds are a function of distance.
+            """
+            prev_data_distance = self.parameters["data_code_distance"]
+
+            """
+            Total number of rounds of surface code error detection required to prepare the necessary number of T states.
+            T-count is T-depth when all T gates are sequential
+            Each distillation has known number of units in time
+            The distance has been computed in compute_distillation_scale_factor
+            """
+            execution_rounds = self.compute_execution_rounds()
+
+            """
+            Assume that the logical qubit patches are executed in a sequence
+            Each logical qubit is ONE unit long
+            And each unit has a distance of execution_rounds (from the distillations)
+            """
+            total_data_rounds = self.compute_number_of_rounds(elements = self.max_logical_qubits,
+                                                              element_distance = execution_rounds,
+                                                              element_units_in_time = 1)
+
+            target_error_per_data_round = 1 / (self.parameters["safety_factor"] * total_data_rounds)
+
+            # Code distance required to achieve the safe target error rate per data round.
+            self.parameters["data_code_distance"] = self.vba_distance(self.parameters["characteristic_gate_error_rate"],
+                                                                      target_error_per_data_round)
 
     def compute_footprint_distillation_qubits(self):
         """
@@ -371,7 +383,7 @@ class Qentiana:
         ret = Qentiana.distance_from_patch_phys_qubits(max_phys_qubits_per_logical)
 
         if ret <= 2:
-            return 1
+            return -1
 
         return ret
 
