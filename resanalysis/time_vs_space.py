@@ -119,7 +119,7 @@ class TimeVsSpace:
         curr_time = math.ceil(data["y"] * experiment["depth_units"])
         curr_space = math.ceil(data["x"] * experiment["footprint"])
 
-        return "{:.2f} {:.2f} -> {} <br>".format(data["x"], data["y"], data["ratio"]) \
+        return "{:.2f} {:.2f} -> {:.2f} <br>".format(data["x"], data["y"], data["ratio"]) \
                + "dist time: {} having a footprint of log qubits<br>".format(data["dist_time_scale"], curr_space) \
                + "dist space: {} for a time of {}<br>".format(data["dist_space_scale"], curr_time) \
                + "qub time: {}<br>".format(data["nr_time_scale"])\
