@@ -75,6 +75,8 @@ class Qentiana:
             # I do not know what this is, but should exit
             print("PROBLEM!!! ----> Error! 3+ distillation levels.")
 
+        self.compute_distillation_box_distance()
+
 
     def compute_dist_box_in_patch_units(self):
         """

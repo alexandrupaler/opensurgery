@@ -1,5 +1,5 @@
 '''
-    Works only with latest github versions of openfermion, cirq and openfermioncirq
+Works only with latest github versions of openfermion, cirq and openfermioncirq
 '''
 
 import time

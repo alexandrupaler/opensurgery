@@ -12,7 +12,7 @@ import time
 import sys
 
 from resanalysis import cube_to_physical as qre
-
+from resanalysis.experiment import Experiment
 
 def write_json(object_to_store):
     with open('layout.json', 'w') as outfile:
@@ -162,10 +162,15 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # Assume number of patches equals qubits
     max_log_qubits = int(commands[0].split(" ")[1])
     t_count = commands.count("NEED A")
+
     # estimate the resources
-    qentiana = qre.Qentiana(t_count, max_log_qubits)
-    res_values = qentiana.compute_physical_resources()
-    print("Resource prediction (levels, phys. qubits, time): ", res_values)
+    ex1 = Experiment()
+    ex1.props["footprint"] = max_log_qubits
+    ex1.props["t_count"] = t_count
+    ex1.props["prefer_depth_over_t_count"] = False
+    qentiana = qre.Qentiana(ex1.props)
+    # res_values = qentiana.compute_physical_resources()
+    # print("Resource prediction (levels, phys. qubits, time): ", res_values)
 
     #
     # The STORAGE of QUBIT STATES
