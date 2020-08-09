@@ -101,7 +101,7 @@ class LayerMap:
         # Compute routes between pairs of ancilla coordinates
         #
         # version two with networkx
-        print("a12", ancilla1, ancilla2)
+        # print("a12", ancilla1, ancilla2)
         back_path = nx.astar_path(self.grid_graph, ancilla1, ancilla2)
 
         # end version two

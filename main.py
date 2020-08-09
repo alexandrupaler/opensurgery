@@ -28,7 +28,7 @@ def generate_random_circuits(random_configs):
 
     for expi in range(len(random_configs["qubits"])):
         # 100 trials for each circuit configuration
-        for nrtrial in range(10):
+        for nrtrial in range(3):
             circ = intf.random_circuit(random_configs["qubits"][expi],
                                        random_configs["gates"][expi],
                                        random_configs["t_ratio"][expi])
@@ -49,11 +49,11 @@ def load_random_circuits(random_configs):
         Reads all the benchmarks into an array.
         It will be heavy on the memory
     """
-    circuit_contents = []
+    circuit_contents = {}
 
     for expi in range(len(random_configs["qubits"])):
         # 100 trials for each circuit configuration
-        for nrtrial in range(10):
+        for nrtrial in range(3):
             # save the circuit to a file
             fname = "random/rand_" + str((nrtrial,
                                           random_configs["qubits"][expi],
@@ -63,7 +63,7 @@ def load_random_circuits(random_configs):
             print("read file:" + fname)
             with open(fname, 'r') as circfile:
                 # read entire file into string stored
-                circuit_contents.append(circfile.read())
+                circuit_contents[fname] = circfile.read()
 
     return circuit_contents
 
@@ -86,14 +86,18 @@ def benchmark_layout_method():
     # load the benchmarking circuits
     benchmark_circuits = load_random_circuits(random_configs)
 
-    for circuit in benchmark_circuits:
-        print(".....")
+    for cname, circuit in benchmark_circuits.items():
+        print(f"....\n{cname}")
         start = time.time()
 
-        process_string_of_circuit(circuit)
+        layout = process_string_of_circuit(circuit)
 
         end = time.time()
-        print("Time", end - start)
+        duration = end-start
+
+        print(f"Time: {duration}, "
+              f"{layout.get_isize()}, {layout.get_jsize()}, {layout.get_tsize()}")
+
         sys.stdout.flush()
 
 
@@ -106,19 +110,19 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
-    # benchmark_layout_method()
-    # #
-    # return
+    benchmark_layout_method()
+    #
+    return
 
-    print("OpenSurgery (version Santa Barbara)\n")
-
-    interface = ci.CirqInterface()
-
-    cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
-
-    local_lay = process_string_of_circuit(cirq_circuit)
-
-    visualise_layout(local_lay)
+    # print("OpenSurgery (version Santa Barbara)\n")
+    #
+    # interface = ci.CirqInterface()
+    #
+    # cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
+    #
+    # local_lay = process_string_of_circuit(cirq_circuit)
+    #
+    # visualise_layout(local_lay)
 
 
 def process_string_of_circuit(qasm_cirq_circuit):
@@ -146,7 +150,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # tests begin
     # commands = ['INIT 2', 'NEED A']# 'MXX A 7', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
-    commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
+    # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
     # tests end
 
@@ -196,7 +200,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
     # limit the maximum commands to nr_commands, because otherwise memory explodes
     for command in commands[0: nr_commands]:
-        print(command)
+        # print(command)
 
         # each command should add a new time step?
         command_splits = command.split(" ")
@@ -320,6 +324,9 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
             # if command_splits[0] in ["MX", "MZ"]:
             #     continue
+        elif command_splits[0] in ["MOVE"]:
+            # MOVE the state between two patches
+            pass
 
         #
         # If this is a measurement that consumed the A state
@@ -330,6 +337,8 @@ def process_string_of_circuit(qasm_cirq_circuit):
 
         if ("ANCILLA" in command_splits) and (command_splits[0] in ["MX", "MZ"]):
             patches_state.remove_active_patch("ANCILLA")
+
+
 
     # Visual Debug the layer map layout
     # lay.debug_layer_map()
