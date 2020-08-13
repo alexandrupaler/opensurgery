@@ -110,19 +110,19 @@ def main():
     # if not os.path.exists("stars"):
     #     os.makedirs("stars")
 
-    benchmark_layout_method()
-    #
-    return
+    # benchmark_layout_method()
+    # #
+    # return
 
-    # print("OpenSurgery (version Santa Barbara)\n")
-    #
-    # interface = ci.CirqInterface()
-    #
-    # cirq_circuit = interface.random_circuit(nr_qubits=10, nr_gates=10)
-    #
-    # local_lay = process_string_of_circuit(cirq_circuit)
-    #
-    # visualise_layout(local_lay)
+    print("OpenSurgery (version Santa Barbara)\n")
+
+    interface = ci.CirqInterface()
+
+    cirq_circuit = interface.random_circuit(nr_qubits=100, nr_gates=20, ratio_t_gates=0.05)
+
+    local_lay = process_string_of_circuit(cirq_circuit)
+
+    visualise_layout(local_lay)
 
 
 def process_string_of_circuit(qasm_cirq_circuit):
@@ -148,7 +148,13 @@ def process_string_of_circuit(qasm_cirq_circuit):
     # load from file
     # commands = prep.load_multibody_format()
 
-    # tests begin
+    #
+    # These are the commands visualised in index.html
+    # Includes a single distillation
+    #
+    # commands = ['INIT 23', 'H 0', 'S 3', 'H 7', 'ANCILLA 0', 'MXX 12 ANCILLA', 'MZZ 22 ANCILLA', 'MX ANCILLA', 'H 6', 'S 13', 'ANCILLA 0', 'MXX 17 ANCILLA', 'MZZ 19 ANCILLA', 'MX ANCILLA', 'S 14', 'H 5', 'S 12', 'S 4', 'H 11', 'ANCILLA 0', 'MXX 16 ANCILLA', 'MZZ 8 ANCILLA', 'MX ANCILLA', 'H 21', 'NEED A', 'MZZ A 18', 'MX A', 'H 15', 'H 9', 'ANCILLA 0', 'MXX 2 ANCILLA', 'MZZ 19 ANCILLA', 'MX ANCILLA', 'ANCILLA 0', 'MXX 1 ANCILLA', 'MZZ 20 ANCILLA', 'MX ANCILLA', 'S 10']
+
+    # Test commands. Use unit tests at some point
     # commands = ['INIT 2', 'NEED A']# 'MXX A 7', 'H 2', 'MX A', 'S ANCILLA', 'MX ANCILLA', 'ANCILLA 0']
     # commands = ['INIT 10', 'NEED A', 'S 2', 'MXX 2 3', 'H 2', 'H 3', 'MXX 2 3', 'MZZ A 3']
     # commands = ['INIT 4', 'NEED A', 'MZZ A 0', 'MX A' , 'S ANCILLA', 'MXX ANCILLA 0', 'H 3', 'S 3', 'NEED A', 'MZZ A 3', 'MX A', 'S ANCILLA', 'MXX ANCILLA 3', 'S 3', 'H 3', 'H 3', 'S 3', 'NEED A', 'MZZ A 0 3 1 2', 'MX A', 'S ANCILLA', 'MXX ANCILLA 0 3 1 2', 'S 3', 'H 3', 'H 2', 'S 2', 'H 1', 'NEED A', 'MZZ A 2 1', 'MX A', 'S ANCILLA', 'MXX ANCILLA 2 1', 'S 2', 'H 2', 'H 1', 'H 0', 'S 0', 'H 3', 'S 3', 'MZZ 0 1 2 3', 'H 0', 'H 1', 'MZZ 0 1', 'H 0', 'H 3', 'MZZ 0 3']
@@ -217,12 +223,9 @@ def process_string_of_circuit(qasm_cirq_circuit):
             lay = la.CubeLayout(layer_map, nr_commands)
 
             # for debugging purposes place some cubes to see if the layout is correct
-            lay.debug_layer_map()
+            # lay.debug_layer_map()
 
         elif command_splits[0] == "NEED":
-            # add on time axis
-            # lay.extend_data_qubits_to_current_time()
-
             sets = lay.create_distillation()
             lay.configure_operation(*sets)
             # simples solution for the moment
@@ -231,8 +234,12 @@ def process_string_of_circuit(qasm_cirq_circuit):
             # - all the following gates are delayed until the distillation has finished
 
             # Get the 2D coordinates of the active patches
-            # filtered_active_patches = filter_active_patches(lay, patches_state, filter_out=[])
-            # lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, filtered_active_patches)
+            # Comment the following lines to not show the qubits overlapping
+            # in time with the distillation
+            filtered_active_patches = filter_active_patches(lay, patches_state,
+                                                            filter_out=[])
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state,
+                                                        filtered_active_patches)
 
             # the distilled A state is available
             patches_state.add_active_patch("A")
@@ -304,6 +311,7 @@ def process_string_of_circuit(qasm_cirq_circuit):
             # this is not really necessary...
             # if the cell does not exist, the decorator cannot be added
 
+
             # coordinates of the data qubit
             qubit_string = lay.layer_map.get_circuit_qubit_name(command_splits[1])
             qub1_coord = lay.layer_map.get_qubit_coordinate_2d(qubit_string)
@@ -319,11 +327,11 @@ def process_string_of_circuit(qasm_cirq_circuit):
             sets = (curr_op_type, span_set, [], [])
             lay.configure_operation(*sets)
 
-            coordinates_all_active_patches = filter_active_patches(lay, patches_state, filter_out=command_splits[1:])
-            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state, coordinates_all_active_patches)
+            filtered_active_patches = filter_active_patches(lay, patches_state,
+                                                            filter_out=command_splits[1:])
+            lay.move_curr_time_coord_to_max_from_coords(sets, patches_state,
+                                                        filtered_active_patches)
 
-            # if command_splits[0] in ["MX", "MZ"]:
-            #     continue
         elif command_splits[0] in ["MOVE"]:
             # MOVE the state between two patches
             pass

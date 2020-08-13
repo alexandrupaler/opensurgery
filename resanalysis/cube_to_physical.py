@@ -26,10 +26,10 @@ class Qentiana:
                             # we target a failure probability of 1/(SN).
                             "safety_factor": experiment["safety_factor"],#99,
                             # d1 must be at least 15 to permit enough space for the state injection
-                            "l1_distillation_code_distance_d1": 15,
+                            "l1_distillation_code_distance_d1": 7,#15
                             # d2 could in principle be less than 15, but it seems unlikely you would
                             # actually want to do that. Max and default is 31.
-                            "l2_distillation_code_distance_d2": 31,
+                            "l2_distillation_code_distance_d2": 9,#31
                             # Start with 7, but recompute it
                             "data_code_distance": 7,
                             # For the moment assume that the T-depth is not really the worst case in time

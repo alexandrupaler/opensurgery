@@ -204,6 +204,11 @@
                         {
                             allow_extension_time = true;
                         }
+                        if (coordinates_matrix[cube.fx][cube.fy][cube.fz + 1].includes("OperationTypes.MOVE_PATCH"))
+                        {
+                            // connect orange-orange
+                            allow_extension_time = true;
+                        }
                     }
                 }
                 else

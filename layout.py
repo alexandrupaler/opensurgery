@@ -201,8 +201,6 @@ class CubeLayout:
         :return: for the moment, nothing
         '''
 
-        coord_patches_to_extend_set = self.patch_names_to_coordinates(patches_to_extend_set)
-
         max_time_coord = -1
         for coordinate_set in coordinate_sets:
             if isinstance(coordinate_set, list):
@@ -211,27 +209,33 @@ class CubeLayout:
                     max_coord = max(time_coord_set)
                     max_time_coord = max([max_time_coord, max_coord])
 
-        dif = max_time_coord - self.current_time_coordinate
-        if dif >= 0:
-            for i in range(dif + 1):
-
-                if coord_patches_to_extend_set is not None:
-                    sets = self.extend_data_qubits_to_current_time(coord_patches_to_extend_set)
-                    if sets is not None:
-                        # why should it be None?
-                        self.configure_operation(*sets)
-
-                        for key in patches_to_extend_set:
-                            pc = self.layer_map.get_qubit_coordinate_2d(key)
-                            orientation_integer = patches_state.get_patch_orientation_as_number(key)
-                            self.coordinates[pc[0]][pc[1]][self.current_time_coordinate].sides_integer_value = orientation_integer
+        dif = max_time_coord - self.current_time_coordinate + 1
+        if dif <= 0:
+            return
 
 
-                # the last execution of this line
-                # will automatically prepare the next gate application\
-                # so do not call again...how to ensure this?
-                # does it make sense to ensure it?
-                self.increase_current_time_coordinate()
+        for i in range(dif):
+
+            coord_patches_to_extend_set = self.patch_names_to_coordinates(
+                patches_to_extend_set)
+
+            if coord_patches_to_extend_set is not None:
+                sets = self.extend_data_qubits_to_current_time(coord_patches_to_extend_set)
+                if sets is not None:
+                    # why should it be None?
+                    self.configure_operation(*sets)
+
+                    for key in patches_to_extend_set:
+                        pc = self.layer_map.get_qubit_coordinate_2d(key)
+                        orientation_integer = patches_state.get_patch_orientation_as_number(key)
+                        self.coordinates[pc[0]][pc[1]][self.current_time_coordinate].sides_integer_value = orientation_integer
+
+
+            # the last execution of this line
+            # will automatically prepare the next gate application\
+            # so do not call again...how to ensure this?
+            # does it make sense to ensure it?
+            self.increase_current_time_coordinate()
 
 
     def extend_data_qubits_to_current_time(self, coord_active_qubits, time_coord=None):
@@ -469,6 +473,8 @@ class CubeLayout:
         # -> also no need to move anything, because in the current hard coded setup
         #   there is enough space for the S gate
         #
+
+        # Step1: Move
         if qub_string != 'ANCILLA' and (qub2_name in active_patches):
             #
             # create data movement to ancilla
@@ -489,7 +495,7 @@ class CubeLayout:
                 tmp_active_patches.append(anc3_name)
 
         #
-        # create S gate
+        # Step2: create S gate
         #
         span_set = [
             qub1_coord + (self.current_time_coordinate,)
@@ -505,15 +511,24 @@ class CubeLayout:
         sets = (opc.OperationTypes.USE_S_GATE, span_set, [], [])
         self.configure_operation(*sets)
 
+        # Step3: Extend the ancilla
+        span_set = [
+            anc3_coord + (self.current_time_coordinate,)
+            , anc3_coord + (self.current_time_coordinate + 1,)
+        ]
+        sets = (opc.OperationTypes.MOVE_PATCH, span_set, [], [])
+        self.configure_operation(*sets)
+
         # filter the current qubit from the set of things to update
         tmp_active_patches = [x for x in tmp_active_patches if x != qub_string]
-        self.move_curr_time_coord_to_max_from_coords(sets, patches_state, tmp_active_patches)
+        self.move_curr_time_coord_to_max_from_coords(sets, patches_state,
+                                                     tmp_active_patches)
         # put it back
         tmp_active_patches.append(qub_string)
 
 
         #
-        # Move back
+        # Step4: Move back
         #
         if qub_string != 'ANCILLA' and (qub2_name in active_patches):
             #
