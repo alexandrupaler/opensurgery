@@ -3,35 +3,37 @@
  * Modified to work with my code
  */
 
-THREE.PalerBoxBufferGeometry = function () {
+class PalerBoxBufferGeometry extends THREE.BoxBufferGeometry{
 
-	THREE.BufferGeometry.call(this);
+    constructor(){
+        super();
 
-	this.type = 'PalerBoxBufferGeometry';
+        this.type = 'PalerBoxBufferGeometry';
 
-	/*
-		A maximum limit of the total number of vertices which the geometry can hold
-	*/
-	// removed two zeros
-	var vertexCount = 500000;
+        /*
+            A maximum limit of the total number of vertices which the geometry can hold
+        */
+        // removed two zeros
+        var vertexCount = 500000;
 
-	// buffers
-	this.vertices = new Float32Array(vertexCount * 3);
+        // buffers
+        this.vertices = new Float32Array(vertexCount * 3);
 
-	this.indicesCount = 0;
-	this.indices = new Uint32Array(vertexCount);
+        this.indicesCount = 0;
+        this.indices = new Uint32Array(vertexCount);
 
-	// a map for the coordinates already used
-	// this.existence = new Map();
+        // a map for the coordinates already used
+        // this.existence = new Map();
 
-	// offset variables
-	this.vertexBufferOffset = 0;
+        // offset variables
+        this.vertexBufferOffset = 0;
 
-	// hard coded dimension of this array
-	// a face is limited to four corners
-	this.corners_3d_points = new Array(4);
+        // hard coded dimension of this array
+        // a face is limited to four corners
+        this.corners_3d_points = new Array(4);
+    }
 
-	THREE.PalerBoxBufferGeometry.prototype.addBox = function (which_faces, position, dimensions) {
+	addBox (which_faces, position, dimensions) {
 
 		// // build each side of the box geometry, if specified 
 		// if (which_faces == 0)
@@ -69,7 +71,7 @@ THREE.PalerBoxBufferGeometry = function () {
 			this.buildPlane(poss, 'x', 'y', 'z', - 1, - 1, width, height, - depth); // nz
 	}
 
-	THREE.PalerBoxBufferGeometry.prototype.addAttributes = function () {
+	addAttributes () {
 		var vertices2 = new Float32Array(this.vertexBufferOffset);
 
 		for (var i = 0; i < this.vertexBufferOffset; i++) {
@@ -90,7 +92,7 @@ THREE.PalerBoxBufferGeometry = function () {
 		this.setIndex(new THREE.BufferAttribute(indices2, 1));
 	}
 
-	THREE.PalerBoxBufferGeometry.prototype.addVertex = function (vector, vbo) {
+	addVertex (vector, vbo) {
 
 		this.vertices[vbo + 0] = vector.x;
 		this.vertices[vbo + 1] = vector.y;
@@ -104,13 +106,13 @@ THREE.PalerBoxBufferGeometry = function () {
 		return vbo;
 	}
 
-	THREE.PalerBoxBufferGeometry.prototype.addFace = function (idx1, idx2, idx3, list) {
+	addFace (idx1, idx2, idx3, list) {
 		this.vertexBufferOffset = this.addVertex(list[idx1], this.vertexBufferOffset);
 		this.vertexBufferOffset = this.addVertex(list[idx2], this.vertexBufferOffset);
 		this.vertexBufferOffset = this.addVertex(list[idx3], this.vertexBufferOffset);
 	}
 
-	THREE.PalerBoxBufferGeometry.prototype.buildPlane = function (position, u, v, w, udir, vdir, width, height, depth) {
+	buildPlane (position, u, v, w, udir, vdir, width, height, depth) {
 
 		var segmentWidth = width;
 		var segmentHeight = height;
@@ -159,7 +161,7 @@ THREE.PalerBoxBufferGeometry = function () {
 			}
 		}
 	}
-};
+}
 
-THREE.PalerBoxBufferGeometry.prototype = Object.create(THREE.BufferGeometry.prototype);
-THREE.PalerBoxBufferGeometry.prototype.constructor = THREE.PalerBoxBufferGeometry;
+//THREE.PalerBoxBufferGeometry.prototype = Object.create(THREE.BufferGeometry.prototype);
+//THREE.PalerBoxBufferGeometry.prototype.constructor = THREE.PalerBoxBufferGeometry;
